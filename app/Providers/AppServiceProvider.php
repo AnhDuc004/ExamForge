@@ -11,7 +11,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register application service providers for bindings and events
+        $this->app->register(\App\Providers\RepositoryServiceProvider::class);
+        $this->app->register(\App\Providers\EventServiceProvider::class);
     }
 
     /**
