@@ -87,6 +87,7 @@ class AuthController extends Controller
 
     public function refresh(Request $request): JsonResponse
     {
+        \Log::info('Refreshing token for user', ['user_id' => $request->user()->id, 'device_name' => $request->input('device_name')]);
         $result = $this->authService->refreshToken(
             $request->user(),
             $request->input('device_name')

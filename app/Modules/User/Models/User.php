@@ -2,23 +2,33 @@
 
 namespace App\Modules\User\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasUuid;
 use App\Traits\HasPermission;
 
-class User extends Model
+class User extends Authenticatable
 {
     use HasUuid, HasPermission, HasApiTokens;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
-    protected $fillable = ['email', 'display_name', 'password_hash', 'tenant_id', 'is_active'];
+    protected $fillable = [
+        'email',
+        'display_name',
+        'password_hash',
+        'tenant_id',
+        'is_active'
+    ];
 
-    protected $hidden = ['password_hash'];
+    protected $hidden = [
+        'password_hash'
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

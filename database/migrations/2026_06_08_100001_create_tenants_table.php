@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('plan')->default('free');
             $table->boolean('is_active')->default(true);
-            $table->timestamp('created_at');
+            $table->timestamps();
         });
     }
 

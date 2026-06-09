@@ -15,8 +15,7 @@ return new class extends Migration
             $table->integer('position');
             $table->integer('score_override')->nullable();
             $table->jsonb('question_snapshot');
-            $table->timestamp('created_at')->nullable();
-            $table->timestamp('updated_at')->nullable();
+            $table->timestamps();
 
             $table->foreign('section_id')->references('id')->on('test_sections')->onDelete('cascade');
             $table->foreign('question_id')->references('id')->on('questions')->onDelete('cascade');

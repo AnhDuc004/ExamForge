@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('access_type');
             $table->string('access_token')->nullable()->unique();
             $table->string('status')->default('pending');
-            $table->timestamp('created_at');
+            $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
             $table->foreign('test_id')->references('id')->on('tests')->onDelete('cascade');

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('resource_type');
             $table->uuid('resource_id');
             $table->jsonb('metadata')->nullable();
-            $table->timestamp('created_at');
+            $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
             $table->foreign('actor_id')

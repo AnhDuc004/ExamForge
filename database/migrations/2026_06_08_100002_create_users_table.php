@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('display_name');
             $table->string('password_hash');
             $table->boolean('is_active')->default(true);
-            $table->timestamp('created_at');
+            $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
             $table->unique(['tenant_id', 'email']);
