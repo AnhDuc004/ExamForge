@@ -5,6 +5,7 @@ namespace App\Modules\Question\Repositories;
 use App\Shared\Repositories\BaseRepository;
 use App\Modules\Question\Repositories\Contracts\QuestionRepositoryInterface;
 use App\Modules\Question\Models\Question;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 class QuestionRepository extends BaseRepository implements QuestionRepositoryInterface
@@ -39,7 +40,11 @@ class QuestionRepository extends BaseRepository implements QuestionRepositoryInt
         $this->model->destroy($id);
     }
 
-    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15): Paginator
+    public function listByTenant(
+        string $tenantId,
+        int $page = 1,
+        int $perPage = 15
+    ): LengthAwarePaginator
     {
         return $this->model
             ->where('tenant_id', $tenantId)

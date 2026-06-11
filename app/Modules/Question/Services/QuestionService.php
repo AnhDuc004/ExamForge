@@ -7,6 +7,7 @@ use App\Modules\Question\DTOs\CreateQuestionDTO;
 use App\Modules\Question\DTOs\UpdateQuestionDTO;
 use App\Modules\Question\Repositories\Contracts\QuestionRepositoryInterface;
 use App\Events\QuestionCreated;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 class QuestionService extends BaseService
@@ -95,7 +96,7 @@ class QuestionService extends BaseService
         ];
     }
 
-    public function list(string $tenantId, int $page = 1, int $perPage = 15): Paginator
+    public function list(string $tenantId, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->questionRepository->listByTenant($tenantId, $page, $perPage);
     }

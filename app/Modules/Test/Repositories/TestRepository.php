@@ -4,7 +4,7 @@ namespace App\Modules\Test\Repositories;
 
 use App\Modules\Test\Models\Test;
 use App\Modules\Test\Repositories\Contracts\TestRepositoryInterface;
-use App\Repositories\BaseRepository;
+use App\Shared\Repositories\BaseRepository;
 
 class TestRepository extends BaseRepository implements TestRepositoryInterface
 {

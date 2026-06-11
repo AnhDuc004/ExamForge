@@ -2,6 +2,7 @@
 
 namespace App\Modules\Question\Repositories\Contracts;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 interface QuestionRepositoryInterface
@@ -14,7 +15,7 @@ interface QuestionRepositoryInterface
 
     public function delete(string $id): void;
 
-    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15): Paginator;
+    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15): LengthAwarePaginator;
 
     public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): Paginator;
 
