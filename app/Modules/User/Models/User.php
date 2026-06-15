@@ -39,9 +39,12 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(
             \App\Modules\Role\Models\Role::class,
-            'user_roles',
-            'user_id',
+            'model_has_roles',
+            'model_id',
             'role_id'
-        );
+        )->wherePivot(
+                'model_type',
+                self::class
+            );
     }
 }

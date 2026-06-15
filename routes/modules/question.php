@@ -11,7 +11,7 @@ Route::prefix('questions')->middleware('auth:sanctum')->group(function () {
 
     // Create question (requires permission:question,create)
     Route::post('/', [QuestionController::class, 'store'])
-        ->middleware('permission:question,create')
+        ->middleware('permission:questions,create')
         ->name('questions.store');
 
     // Get specific question
@@ -19,21 +19,21 @@ Route::prefix('questions')->middleware('auth:sanctum')->group(function () {
 
     // Update question (requires permission:question,update)
     Route::put('/{id}', [QuestionController::class, 'update'])
-        ->middleware('permission:question,update')
+        ->middleware('permission:questions,update')
         ->name('questions.update');
 
     // Delete question (requires permission:question,delete)
     Route::delete('/{id}', [QuestionController::class, 'destroy'])
-        ->middleware('permission:question,delete')
+        ->middleware('permission:questions,delete')
         ->name('questions.destroy');
 
     // Publish question (requires permission:question,publish)
     Route::post('/{id}/publish', [QuestionController::class, 'publish'])
-        ->middleware('permission:question,publish')
+        ->middleware('permission:questions,publish')
         ->name('questions.publish');
 
     // Archive question (requires permission:question,archive)
     Route::post('/{id}/archive', [QuestionController::class, 'archive'])
-        ->middleware('permission:question,archive')
+        ->middleware('permission:questions,archive')
         ->name('questions.archive');
 });

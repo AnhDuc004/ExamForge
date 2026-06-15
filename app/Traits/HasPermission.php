@@ -2,35 +2,38 @@
 
 namespace App\Traits;
 
+use App\Modules\Role\Models\Role;
+
 trait HasPermission
 {
-    // Placeholder implementations; services will call into repositories for real checks
-    public function hasRole(string $role): bool
+    public function hasRole(string $roleName): bool
     {
-        return false;
+        return $this->roles()
+            ->where('name', $roleName)
+            ->exists();
     }
 
     public function hasPermission(string $resource, string $action): bool
     {
-        return false;
+        return $this->roles()
+            ->whereHas('permissions', function ($query) use ($resource, $action) {
+                $query->where('resource', $resource)
+                      ->where('action', $action);
+            })
+            ->exists();
     }
 
     public function hasAnyRole(array $roles): bool
     {
-        foreach ($roles as $r) {
-            if ($this->hasRole($r)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->roles()
+            ->whereIn('name', $roles)
+            ->exists();
     }
 
     public function hasAnyPermission(array $pairs): bool
     {
         foreach ($pairs as $pair) {
-            [$resource, $action] = $pair;
-            if ($this->hasPermission($resource, $action)) {
+            if ($this->hasPermission($pair[0], $pair[1])) {
                 return true;
             }
         }

@@ -9,6 +9,7 @@ class RegisterDTO extends BaseDTO
     public string $email;
     public string $display_name;
     public string $password;
+    public string $tenant_id;
     public ?string $device_name = null;
 
     public function __construct(array $attributes = [])

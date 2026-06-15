@@ -50,6 +50,7 @@ class AuthController extends Controller
             'display_name' => $request->display_name,
             'password' => $request->password,
             'device_name' => $request->device_name,
+            'tenant_id' => $request->tenant_id,
         ]);
 
         $result = $this->authService->register($dto);

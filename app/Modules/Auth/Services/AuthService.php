@@ -67,7 +67,7 @@ class AuthService extends BaseService
             'email' => $dto->email,
             'display_name' => $dto->display_name,
             'password_hash' => Hash::make($dto->password),
-            'tenant_id' => $tenantId,
+            'tenant_id' => $dto->tenant_id,
             'is_active' => true,
         ]);
 
