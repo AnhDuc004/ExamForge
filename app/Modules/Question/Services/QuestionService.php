@@ -101,12 +101,12 @@ class QuestionService extends BaseService
         return $this->questionRepository->listByTenant($tenantId, $page, $perPage);
     }
 
-    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): Paginator
+    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->questionRepository->listByStatus($tenantId, $status, $page, $perPage);
     }
 
-    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): Paginator
+    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->questionRepository->listByTags($tenantId, $tags, $page, $perPage);
     }

@@ -14,11 +14,15 @@ interface AssignmentRepositoryInterface
 
     public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15);
 
-    public function listByUser(string $userId, int $page = 1, int $perPage = 15);
+    public function listByAssignee(string $assigneeId, int $page = 1, int $perPage = 15);
 
-    public function listByUserAndTenant(string $userId, string $tenantId, int $page = 1, int $perPage = 15);
+    public function listByAssigneeAndTenant(string $assigneeId, string $tenantId, int $page = 1, int $perPage = 15);
+
+    public function listByAssignedBy(string $assignedById, int $page = 1, int $perPage = 15);
+
+    public function listByAssignedByAndTenant(string $assignedById, string $tenantId, int $page = 1, int $perPage = 15);
 
     public function findByAccessToken(string $accessToken);
 
-    public function findByUserAndTest(string $userId, string $testId);
+    public function findByAssigneeAndTest(string $assigneeId, string $testId);
 }

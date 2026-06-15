@@ -12,17 +12,36 @@ class AssignmentResource extends JsonResource
         return [
             'id' => $this->id,
             'tenant_id' => $this->tenant_id,
-            'user_id' => $this->user_id,
             'test_id' => $this->test_id,
-            'due_date' => $this->due_date,
-            'access_token' => $this->access_token,
+            'assignee_id' => $this->assignee_id,
+            'assigned_by' => $this->assigned_by,
+            'due_at' => $this->due_at,
+            'access_type' => $this->access_type,
             'max_attempts' => $this->max_attempts,
-            'current_attempts' => $this->current_attempts,
             'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'test' => $this->whenLoaded('test'),
-            'user' => $this->whenLoaded('user'),
+            'test' => $this->whenLoaded('test', function () {
+                return [
+                    'id' => $this->test->id,
+                    'title' => $this->test->title,
+                    'status' => $this->test->status,
+                ];
+            }),
+            'assignee' => $this->whenLoaded('assignee', function () {
+                return [
+                    'id' => $this->assignee->id,
+                    'email' => $this->assignee->email,
+                    'display_name' => $this->assignee->display_name,
+                ];
+            }),
+            'assigned_by_user' => $this->whenLoaded('assignedBy', function () {
+                return [
+                    'id' => $this->assignedBy->id,
+                    'email' => $this->assignedBy->email,
+                    'display_name' => $this->assignedBy->display_name,
+                ];
+            }),
         ];
     }
 }

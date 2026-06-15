@@ -17,7 +17,7 @@ interface QuestionRepositoryInterface
 
     public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15): LengthAwarePaginator;
 
-    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): Paginator;
+    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): LengthAwarePaginator;
 
-    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): Paginator;
+    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): LengthAwarePaginator;
 }

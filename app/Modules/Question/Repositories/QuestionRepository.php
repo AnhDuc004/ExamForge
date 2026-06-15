@@ -51,7 +51,7 @@ class QuestionRepository extends BaseRepository implements QuestionRepositoryInt
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
-    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): Paginator
+    public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->where('tenant_id', $tenantId)
@@ -59,7 +59,7 @@ class QuestionRepository extends BaseRepository implements QuestionRepositoryInt
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
-    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): Paginator
+    public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model
             ->where('tenant_id', $tenantId)

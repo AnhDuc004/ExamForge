@@ -15,16 +15,56 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
 
     public function findById(string $id)
     {
-        return $this->model->find($id);
+        return $this->model->with('roles')->find($id);
     }
 
     public function findByEmail(string $email)
     {
-        return $this->model->where('email', $email)->first();
+        return $this->model->with('roles')->where('email', $email)->first();
+    }
+
+    public function findByTenantAndEmail(string $tenantId, string $email)
+    {
+        return $this->model->with('roles')
+            ->where('tenant_id', $tenantId)
+            ->where('email', $email)
+            ->first();
+    }
+
+    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15)
+    {
+        return $this->model->with('roles')
+            ->where('tenant_id', $tenantId)
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    public function list(int $page = 1, int $perPage = 15)
+    {
+        return $this->model->with('roles')->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function create(array $attributes)
     {
         return $this->model->create($attributes);
+    }
+
+    public function update(string $id, array $attributes)
+    {
+        $user = $this->findById($id);
+
+        if ($user) {
+            $user->update($attributes);
+        }
+
+        return $user;
+    }
+
+    public function delete(string $id): void
+    {
+        $user = $this->findById($id);
+
+        if ($user) {
+            $user->delete();
+        }
     }
 }

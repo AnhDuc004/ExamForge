@@ -41,6 +41,16 @@ class RepositoryServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Modules\Test\Repositories\Contracts\TestSectionRepositoryInterface::class,
+            \App\Modules\Test\Repositories\TestSectionRepository::class
+        );
+
+        $this->app->bind(
+            \App\Modules\Test\Repositories\Contracts\TestSectionQuestionRepositoryInterface::class,
+            \App\Modules\Test\Repositories\TestSectionQuestionRepository::class
+        );
+
+        $this->app->bind(
             \App\Modules\Assignment\Repositories\Contracts\AssignmentRepositoryInterface::class,
             \App\Modules\Assignment\Repositories\AssignmentRepository::class
         );

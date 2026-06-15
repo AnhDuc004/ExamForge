@@ -12,15 +12,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Create assignment
     Route::post('assignments', [AssignmentController::class, 'store'])
-        ->middleware('permission:assignment,create');
+        ->middleware('permission:assignments,manage');
 
     // Update assignment
     Route::put('assignments/{id}', [AssignmentController::class, 'update'])
-        ->middleware('permission:assignment,update');
+        ->middleware('permission:assignments,manage');
 
     // Delete assignment
     Route::delete('assignments/{id}', [AssignmentController::class, 'destroy'])
-        ->middleware('permission:assignment,delete');
+        ->middleware('permission:assignments,manage');
 
     // Verify access token (for starting attempt)
     Route::post('assignments/verify-token', [AssignmentController::class, 'verifyAccessToken']);

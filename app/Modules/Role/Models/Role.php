@@ -12,7 +12,6 @@ class Role extends Model
 
     protected $keyType = 'string';
     public $incrementing = false;
-    public $timestamps = false;
 
     protected $fillable = ['tenant_id', 'name', 'description'];
 
@@ -20,9 +19,12 @@ class Role extends Model
     {
         return $this->belongsToMany(
             \App\Modules\User\Models\User::class,
-            'user_roles',
+            'model_has_roles',
             'role_id',
-            'user_id'
+            'model_id'
+        )->wherePivot(
+            'model_type',
+            \App\Modules\User\Models\User::class
         );
     }
 

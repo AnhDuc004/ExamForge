@@ -6,8 +6,10 @@ class CreateAssignmentDTO
 {
     public function __construct(
         public string $test_id,
-        public string $user_id,
-        public ?string $due_date = null,
+        public string $assignee_id,
+        public string $assigned_by,
+        public string $access_type,
+        public ?string $due_at = null,
         public int $max_attempts = 1,
     ) {}
 }

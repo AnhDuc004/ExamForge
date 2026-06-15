@@ -12,7 +12,6 @@ class Permission extends Model
 
     protected $keyType = 'string';
     public $incrementing = false;
-    public $timestamps = false;
 
     protected $fillable = ['resource', 'action'];
 
@@ -20,7 +19,7 @@ class Permission extends Model
     {
         return $this->belongsToMany(
             \App\Modules\Role\Models\Role::class,
-            'role_permissions',
+            'role_has_permissions',
             'permission_id',
             'role_id'
         );

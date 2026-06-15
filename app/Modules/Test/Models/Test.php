@@ -21,15 +21,13 @@ class Test extends Model
         'duration_seconds',
         'passing_score',
         'status',
-        'shuffle_questions',
-        'show_correct_answers',
+        'published_at',
     ];
 
     protected $casts = [
         'duration_seconds' => 'integer',
-        'passing_score' => 'float',
-        'shuffle_questions' => 'boolean',
-        'show_correct_answers' => 'boolean',
+        'passing_score' => 'integer',
+        'published_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -48,6 +46,14 @@ class Test extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\User\Models\User::class, 'created_by', 'id');
+    }
+
+    /**
+     * Test has many assignments
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Assignment\Models\Assignment::class, 'test_id', 'id');
     }
 
     /**

@@ -16,8 +16,6 @@ class User extends Authenticatable
 
     public $incrementing = false;
 
-    public $timestamps = false;
-
     protected $fillable = [
         'email',
         'display_name',

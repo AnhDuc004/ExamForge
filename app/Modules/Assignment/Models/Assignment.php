@@ -16,19 +16,19 @@ class Assignment extends Model
 
     protected $fillable = [
         'tenant_id',
-        'user_id',
         'test_id',
-        'due_date',
+        'assignee_id',
+        'assigned_by',
+        'due_at',
+        'access_type',
         'access_token',
         'max_attempts',
-        'current_attempts',
         'status',
     ];
 
     protected $casts = [
-        'current_attempts' => 'integer',
         'max_attempts' => 'integer',
-        'due_date' => 'datetime',
+        'due_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -37,11 +37,19 @@ class Assignment extends Model
     protected $hidden = ['access_token'];
 
     /**
-     * Assignment belongs to a user
+     * Assignment belongs to the assignee
      */
-    public function user(): BelongsTo
+    public function assignee(): BelongsTo
     {
-        return $this->belongsTo(\App\Modules\User\Models\User::class, 'user_id', 'id');
+        return $this->belongsTo(\App\Modules\User\Models\User::class, 'assignee_id', 'id');
+    }
+
+    /**
+     * Assignment belongs to the user who assigned it
+     */
+    public function assignedBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\User\Models\User::class, 'assigned_by', 'id');
     }
 
     /**

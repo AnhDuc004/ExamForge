@@ -8,14 +8,14 @@ use App\Shared\Repositories\BaseRepository;
 
 class TestRepository extends BaseRepository implements TestRepositoryInterface
 {
-    public function __construct()
+    public function __construct(Test $model)
     {
-        $this->model = new Test();
+        parent::__construct($model);
     }
 
     public function findById(string $id)
     {
-        return $this->model->where('id', $id)->first();
+        return $this->model->with(['creator', 'sections.questions.question'])->where('id', $id)->first();
     }
 
     public function create(array $attributes)
@@ -44,6 +44,7 @@ class TestRepository extends BaseRepository implements TestRepositoryInterface
     public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15)
     {
         return $this->model
+            ->with(['creator', 'sections.questions.question'])
             ->where('tenant_id', $tenantId)
             ->paginate($perPage, ['*'], 'page', $page);
     }
@@ -51,6 +52,7 @@ class TestRepository extends BaseRepository implements TestRepositoryInterface
     public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15)
     {
         return $this->model
+            ->with(['creator', 'sections.questions.question'])
             ->where('tenant_id', $tenantId)
             ->where('status', $status)
             ->paginate($perPage, ['*'], 'page', $page);

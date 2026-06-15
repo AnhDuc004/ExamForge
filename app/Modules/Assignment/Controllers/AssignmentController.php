@@ -17,24 +17,25 @@ class AssignmentController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private AssignmentService $assignmentService) {}
+    public function __construct(private AssignmentService $assignmentService)
+    {
+    }
 
     public function store(CreateAssignmentRequest $request): JsonResponse
     {
         $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
 
         if (!$tenantId) {
-            return response()->json(
-                $this->errorResponse('Tenant not resolved'),
-                400
-            );
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
         }
 
         try {
             $dto = new CreateAssignmentDTO([
                 'test_id' => $request->test_id,
-                'user_id' => $request->user_id,
-                'due_date' => $request->due_date,
+                'assignee_id' => $request->assignee_id,
+                'assigned_by' => $request->user()->id,
+                'access_type' => $request->access_type,
+                'due_at' => $request->due_at,
                 'max_attempts' => $request->max_attempts ?? 1,
             ]);
 
@@ -43,14 +44,14 @@ class AssignmentController extends Controller
             return response()->json(
                 $this->successResponse(
                     $result['message'],
-                    [
+                    array_filter([
                         'assignment' => new AssignmentResource($result['assignment']),
                         'access_token' => $result['access_token'],
-                    ]
+                    ], fn ($value) => $value !== null)
                 ),
                 201
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse($e->getMessage()),
                 400
@@ -58,7 +59,7 @@ class AssignmentController extends Controller
         }
     }
 
-    public function show(string $id, Request $request): JsonResponse
+    public function show(string $id): JsonResponse
     {
         try {
             $result = $this->assignmentService->getById($id);
@@ -67,10 +68,9 @@ class AssignmentController extends Controller
                 $this->successResponse(
                     'Assignment retrieved',
                     new AssignmentResource($result['assignment'])
-                ),
-                200
+                )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse('Assignment not found'),
                 404
@@ -83,20 +83,19 @@ class AssignmentController extends Controller
         $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
 
         if (!$tenantId) {
-            return response()->json(
-                $this->errorResponse('Tenant not resolved'),
-                400
-            );
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
         }
 
-        $page = $request->query('page', 1);
-        $perPage = $request->query('per_page', 15);
+        $page = (int) $request->query('page', 1);
+        $perPage = (int) $request->query('per_page', 15);
+        $assigneeId = $request->query('assignee_id', $request->query('user_id'));
+        $assignedById = $request->query('assigned_by_id');
 
         try {
-            // If filtering by user
-            if ($request->query('user_id')) {
-                $userId = $request->query('user_id');
-                $result = $this->assignmentService->listByUserAndTenant($userId, $tenantId, $page, $perPage);
+            if ($assigneeId) {
+                $result = $this->assignmentService->listByAssigneeAndTenant($assigneeId, $tenantId, $page, $perPage);
+            } elseif ($assignedById) {
+                $result = $this->assignmentService->listByAssignedByAndTenant($assignedById, $tenantId, $page, $perPage);
             } else {
                 $result = $this->assignmentService->listByTenant($tenantId, $page, $perPage);
             }
@@ -116,10 +115,9 @@ class AssignmentController extends Controller
                             'to' => $result['assignments']->lastItem(),
                         ],
                     ]
-                ),
-                200
+                )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse($e->getMessage()),
                 400
@@ -131,9 +129,10 @@ class AssignmentController extends Controller
     {
         try {
             $dto = new UpdateAssignmentDTO([
-                'due_date' => $request->due_date,
+                'due_at' => $request->due_at,
                 'max_attempts' => $request->max_attempts,
                 'status' => $request->status,
+                'access_type' => $request->access_type,
             ]);
 
             $result = $this->assignmentService->update($id, $dto);
@@ -141,11 +140,13 @@ class AssignmentController extends Controller
             return response()->json(
                 $this->successResponse(
                     $result['message'],
-                    new AssignmentResource($result['assignment'])
-                ),
-                200
+                    array_filter([
+                        'assignment' => new AssignmentResource($result['assignment']),
+                        'access_token' => $result['access_token'],
+                    ], fn ($value) => $value !== null)
+                )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse($e->getMessage()),
                 400
@@ -158,11 +159,8 @@ class AssignmentController extends Controller
         try {
             $this->assignmentService->delete($id);
 
-            return response()->json(
-                $this->successResponse('Assignment deleted successfully'),
-                200
-            );
-        } catch (\Exception $e) {
+            return response()->json($this->successResponse('Assignment deleted successfully'));
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse($e->getMessage()),
                 400
@@ -177,17 +175,15 @@ class AssignmentController extends Controller
         ]);
 
         try {
-            $accessTokenHash = hash('sha256', $request->access_token);
-            $result = $this->assignmentService->verifyAccessToken($accessTokenHash);
+            $result = $this->assignmentService->verifyAccessToken(hash('sha256', $request->access_token));
 
             return response()->json(
                 $this->successResponse(
                     $result['message'],
                     new AssignmentResource($result['assignment'])
-                ),
-                200
+                )
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorResponse($e->getMessage()),
                 400
