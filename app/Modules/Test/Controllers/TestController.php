@@ -33,7 +33,7 @@ class TestController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+        $tenantId = $this->resolveTenantId($request);
 
         if (!$tenantId) {
             return response()->json($this->errorResponse('Tenant not resolved'), 400);
@@ -65,7 +65,13 @@ class TestController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $test = $this->testService->find($id);
+        $tenantId = $this->resolveTenantId(request());
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $test = $this->testService->find($id, $tenantId);
 
         if (!$test) {
             return response()->json($this->errorResponse('Test not found'), 404);
@@ -78,7 +84,7 @@ class TestController extends Controller
 
     public function store(CreateTestRequest $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+        $tenantId = $this->resolveTenantId($request);
 
         if (!$tenantId) {
             return response()->json($this->errorResponse('Tenant not resolved'), 400);
@@ -102,6 +108,12 @@ class TestController extends Controller
 
     public function update(string $id, UpdateTestRequest $request): JsonResponse
     {
+        $tenantId = $this->resolveTenantId($request);
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new UpdateTestDTO([
             'title' => $request->title,
             'description' => $request->description,
@@ -109,7 +121,7 @@ class TestController extends Controller
             'passing_score' => $request->passing_score,
         ]);
 
-        $result = $this->testService->update($id, $dto);
+        $result = $this->testService->update($id, $tenantId, $dto);
 
         return response()->json(
             $this->successResponse($result['message'], new TestResource($result['test']))
@@ -118,14 +130,26 @@ class TestController extends Controller
 
     public function destroy(string $id): JsonResponse
     {
-        $this->testService->delete($id);
+        $tenantId = $this->resolveTenantId(request());
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $this->testService->delete($id, $tenantId);
 
         return response()->json($this->successResponse('Test deleted successfully'));
     }
 
     public function publish(string $id): JsonResponse
     {
-        $result = $this->testService->publish($id);
+        $tenantId = $this->resolveTenantId(request());
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $result = $this->testService->publish($id, $tenantId);
 
         return response()->json(
             $this->successResponse($result['message'], new TestResource($result['test']))
@@ -134,6 +158,12 @@ class TestController extends Controller
 
     public function addSection(string $testId, CreateTestSectionRequest $request): JsonResponse
     {
+        $tenantId = $this->resolveTenantId($request);
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new CreateTestSectionDTO([
             'title' => $request->title,
             'instructions' => $request->instructions,
@@ -141,7 +171,7 @@ class TestController extends Controller
             'questions' => $request->questions,
         ]);
 
-        $result = $this->testService->addSection($testId, $dto);
+        $result = $this->testService->addSection($testId, $tenantId, $dto);
 
         return response()->json(
             $this->successResponse($result['message'], new TestSectionResource($result['section'])),
@@ -151,13 +181,19 @@ class TestController extends Controller
 
     public function updateSection(string $testId, string $sectionId, UpdateTestSectionRequest $request): JsonResponse
     {
+        $tenantId = $this->resolveTenantId($request);
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new UpdateTestSectionDTO([
             'title' => $request->title,
             'instructions' => $request->instructions,
             'position' => $request->position,
         ]);
 
-        $result = $this->testService->updateSection($testId, $sectionId, $dto);
+        $result = $this->testService->updateSection($testId, $sectionId, $tenantId, $dto);
 
         return response()->json(
             $this->successResponse($result['message'], new TestSectionResource($result['section']))
@@ -166,7 +202,13 @@ class TestController extends Controller
 
     public function deleteSection(string $testId, string $sectionId): JsonResponse
     {
-        $this->testService->deleteSection($testId, $sectionId);
+        $tenantId = $this->resolveTenantId(request());
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $this->testService->deleteSection($testId, $sectionId, $tenantId);
 
         return response()->json($this->successResponse('Section deleted successfully'));
     }
@@ -176,13 +218,19 @@ class TestController extends Controller
         string $sectionId,
         AttachTestSectionQuestionRequest $request
     ): JsonResponse {
+        $tenantId = $this->resolveTenantId($request);
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new AttachTestSectionQuestionDTO([
             'question_id' => $request->question_id,
             'position' => $request->position,
             'score_override' => $request->score_override,
         ]);
 
-        $result = $this->testService->attachQuestion($testId, $sectionId, $dto);
+        $result = $this->testService->attachQuestion($testId, $sectionId, $tenantId, $dto);
 
         return response()->json(
             $this->successResponse($result['message'], new TestSectionQuestionResource($result['test_section_question'])),
@@ -196,12 +244,18 @@ class TestController extends Controller
         string $sectionQuestionId,
         UpdateTestSectionQuestionRequest $request
     ): JsonResponse {
+        $tenantId = $this->resolveTenantId($request);
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new UpdateTestSectionQuestionDTO([
             'position' => $request->position,
             'score_override' => $request->score_override,
         ]);
 
-        $result = $this->testService->updateSectionQuestion($testId, $sectionId, $sectionQuestionId, $dto);
+        $result = $this->testService->updateSectionQuestion($testId, $sectionId, $sectionQuestionId, $tenantId, $dto);
 
         return response()->json(
             $this->successResponse($result['message'], new TestSectionQuestionResource($result['test_section_question']))
@@ -210,8 +264,19 @@ class TestController extends Controller
 
     public function deleteSectionQuestion(string $testId, string $sectionId, string $sectionQuestionId): JsonResponse
     {
-        $this->testService->deleteSectionQuestion($testId, $sectionId, $sectionQuestionId);
+        $tenantId = $this->resolveTenantId(request());
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $this->testService->deleteSectionQuestion($testId, $sectionId, $sectionQuestionId, $tenantId);
 
         return response()->json($this->successResponse('Question removed from section successfully'));
+    }
+
+    private function resolveTenantId(Request $request): ?string
+    {
+        return $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
     }
 }

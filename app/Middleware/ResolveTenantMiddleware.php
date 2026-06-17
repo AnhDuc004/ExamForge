@@ -11,17 +11,41 @@ class ResolveTenantMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        // Read subdomain and resolve tenant. Placeholder logic.
-        $host = $request->getHost();
-        $parts = explode('.', $host);
-        $subdomain = $parts[0] ?? null;
+        $host = $request->getHost(); 
+        $subdomain = null;
+
+        if (!filter_var($host, FILTER_VALIDATE_IP) && !in_array($host, ['localhost', '127.0.0.1'], true)) {
+            $parts = explode('.', $host);
+            if (count($parts) > 2) {
+                $subdomain = $parts[0] ?? null;
+            }
+        }
+
+        $tenant = null;
 
         if ($subdomain) {
-            // In real implementation, resolve tenant from repository
-            // $tenant = Tenant::where('slug', $subdomain)->first();
-            $tenant = null;
-            App::instance('currentTenant', $tenant);
+            $tenant = Tenant::where('slug', $subdomain)
+                ->where('is_active', true)
+                ->first();
         }
+
+        if (!$tenant) {
+            $tenantId = $request->header('X-Tenant-ID');
+
+            if ($tenantId) {
+                $tenant = Tenant::where('id', $tenantId)
+                    ->where('is_active', true)
+                    ->first();
+            }
+        }
+
+        if (!$tenant) {
+            return response()->json([
+                'message' => 'Tenant not found'
+            ], 404);
+        }
+
+        App::instance('currentTenant', $tenant);
 
         return $next($request);
     }

@@ -13,6 +13,11 @@ class TenantRepository extends BaseRepository implements TenantRepositoryInterfa
         parent::__construct($model);
     }
 
+    public function findById(string $id)
+    {
+        return $this->model->where('id', $id)->where('is_active', true)->first();
+    }
+
     public function findBySlug(string $slug)
     {
         return $this->model->where('slug', $slug)->where('is_active', true)->first();

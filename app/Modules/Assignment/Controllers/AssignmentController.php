@@ -125,6 +125,44 @@ class AssignmentController extends Controller
         }
     }
 
+    public function my(Request $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        try {
+            $page = (int) $request->query('page', 1);
+            $perPage = (int) $request->query('per_page', 15);
+            $result = $this->assignmentService->listByAssigneeAndTenant($request->user()->id, $tenantId, $page, $perPage);
+
+            return response()->json(
+                $this->successResponse(
+                    $result['message'],
+                    [
+                        'data' => AssignmentResource::collection($result['assignments']->items()),
+                        'pagination' => [
+                            'total' => $result['assignments']->total(),
+                            'count' => $result['assignments']->count(),
+                            'per_page' => $result['assignments']->perPage(),
+                            'current_page' => $result['assignments']->currentPage(),
+                            'last_page' => $result['assignments']->lastPage(),
+                            'from' => $result['assignments']->firstItem(),
+                            'to' => $result['assignments']->lastItem(),
+                        ],
+                    ]
+                )
+            );
+        } catch (\Throwable $e) {
+            return response()->json(
+                $this->errorResponse($e->getMessage()),
+                400
+            );
+        }
+    }
+
     public function update(string $id, UpdateAssignmentRequest $request): JsonResponse
     {
         try {

@@ -31,16 +31,29 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
             ->first();
     }
 
-    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15)
+    public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null)
     {
         return $this->model->with('roles')
             ->where('tenant_id', $tenantId)
+            ->when($search, function ($query, $search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('email', 'like', '%' . $search . '%')
+                        ->orWhere('display_name', 'like', '%' . $search . '%');
+                });
+            })
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
-    public function list(int $page = 1, int $perPage = 15)
+    public function list(int $page = 1, int $perPage = 15, ?string $search = null)
     {
-        return $this->model->with('roles')->paginate($perPage, ['*'], 'page', $page);
+        return $this->model->with('roles')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('email', 'like', '%' . $search . '%')
+                        ->orWhere('display_name', 'like', '%' . $search . '%');
+                });
+            })
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function create(array $attributes)

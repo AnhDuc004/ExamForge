@@ -16,13 +16,13 @@ class UserService extends BaseService
     {
     }
 
-    public function list(?string $tenantId = null, int $page = 1, int $perPage = 15)
+    public function list(?string $tenantId = null, int $page = 1, int $perPage = 15, ?string $search = null)
     {
         if ($tenantId) {
-            return $this->userRepository->listByTenant($tenantId, $page, $perPage);
+            return $this->userRepository->listByTenant($tenantId, $page, $perPage, $search);
         }
 
-        return $this->userRepository->list($page, $perPage);
+        return $this->userRepository->list($page, $perPage, $search);
     }
 
     public function find(string $id): ?User
@@ -104,6 +104,31 @@ class UserService extends BaseService
             $updated->roles()->syncWithPivotValues($dto->role_ids, [
                 'model_type' => User::class,
             ]);
+        }
+
+        if ($updated && $dto->is_active === false) {
+            $updated->tokens()->delete();
+        }
+
+        return $updated->load('roles');
+    }
+
+    public function updateStatus(string $id, bool $isActive): User
+    {
+        $user = $this->userRepository->findById($id);
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'user' => ['User not found.'],
+            ]);
+        }
+
+        $updated = $this->userRepository->update($id, [
+            'is_active' => $isActive,
+        ]);
+
+        if (!$isActive) {
+            $updated->tokens()->delete();
         }
 
         return $updated->load('roles');

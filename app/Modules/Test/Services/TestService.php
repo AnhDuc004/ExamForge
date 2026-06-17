@@ -38,9 +38,9 @@ class TestService extends BaseService
         return $this->testRepository->listByStatus($tenantId, $status, $page, $perPage);
     }
 
-    public function find(string $id): ?Test
+    public function find(string $id, string $tenantId): ?Test
     {
-        return $this->testRepository->findById($id);
+        return $this->testRepository->findByIdAndTenant($id, $tenantId);
     }
 
     public function create(CreateTestDTO $dto, string $tenantId, string $userId): array
@@ -64,14 +64,14 @@ class TestService extends BaseService
         });
 
         return [
-            'test' => $this->find($test->id),
+            'test' => $this->find($test->id, $tenantId),
             'message' => 'Test created successfully',
         ];
     }
 
-    public function update(string $id, UpdateTestDTO $dto): array
+    public function update(string $id, string $tenantId, UpdateTestDTO $dto): array
     {
-        $test = $this->testRepository->findById($id);
+        $test = $this->testRepository->findByIdAndTenant($id, $tenantId);
 
         if (!$test) {
             throw ValidationException::withMessages([
@@ -97,18 +97,18 @@ class TestService extends BaseService
         }
 
         if (!empty($attributes)) {
-            $this->testRepository->update($id, $attributes);
+            $this->testRepository->updateByTenant($id, $tenantId, $attributes);
         }
 
         return [
-            'test' => $this->find($id),
+            'test' => $this->find($id, $tenantId),
             'message' => 'Test updated successfully',
         ];
     }
 
-    public function delete(string $id): void
+    public function delete(string $id, string $tenantId): void
     {
-        $test = $this->testRepository->findById($id);
+        $test = $this->testRepository->findByIdAndTenant($id, $tenantId);
 
         if (!$test) {
             throw ValidationException::withMessages([
@@ -118,12 +118,12 @@ class TestService extends BaseService
 
         $this->ensureDraftTest($test);
 
-        $this->testRepository->delete($id);
+        $this->testRepository->deleteByTenant($id, $tenantId);
     }
 
-    public function publish(string $id): array
+    public function publish(string $id, string $tenantId): array
     {
-        $test = $this->testRepository->findById($id);
+        $test = $this->testRepository->findByIdAndTenant($id, $tenantId);
 
         if (!$test) {
             throw ValidationException::withMessages([
@@ -150,28 +150,21 @@ class TestService extends BaseService
             ]);
         }
 
-        $updated = $this->testRepository->update($id, [
+        $updated = $this->testRepository->updateByTenant($id, $tenantId, [
             'status' => 'published',
             'published_at' => now(),
         ]);
 
         return [
-            'test' => $this->find($updated->id),
+            'test' => $this->find($updated->id, $tenantId),
             'message' => 'Test published successfully',
         ];
     }
 
-    public function addSection(string $testId, CreateTestSectionDTO $dto): array
+    public function addSection(string $testId, string $tenantId, CreateTestSectionDTO $dto): array
     {
-        $section = DB::transaction(function () use ($testId, $dto) {
-            $test = $this->testRepository->findById($testId);
-
-            if (!$test) {
-                throw ValidationException::withMessages([
-                    'test' => ['Test not found.'],
-                ]);
-            }
-
+        $section = DB::transaction(function () use ($testId, $tenantId, $dto) {
+            $test = $this->resolveTestOrFail($testId, $tenantId);
             $this->ensureDraftTest($test);
 
             $section = $this->sectionRepository->create([
@@ -194,7 +187,7 @@ class TestService extends BaseService
         ];
     }
 
-    public function updateSection(string $testId, string $sectionId, UpdateTestSectionDTO $dto): array
+    public function updateSection(string $testId, string $sectionId, string $tenantId, UpdateTestSectionDTO $dto): array
     {
         $section = $this->sectionRepository->findById($sectionId);
 
@@ -204,7 +197,7 @@ class TestService extends BaseService
             ]);
         }
 
-        $test = $this->testRepository->findById($testId);
+        $test = $this->resolveTestOrFail($testId, $tenantId);
         $this->ensureDraftTest($test);
 
         $attributes = [];
@@ -229,7 +222,7 @@ class TestService extends BaseService
         ];
     }
 
-    public function deleteSection(string $testId, string $sectionId): void
+    public function deleteSection(string $testId, string $sectionId, string $tenantId): void
     {
         $section = $this->sectionRepository->findById($sectionId);
 
@@ -239,15 +232,15 @@ class TestService extends BaseService
             ]);
         }
 
-        $test = $this->testRepository->findById($testId);
+        $test = $this->resolveTestOrFail($testId, $tenantId);
         $this->ensureDraftTest($test);
 
         $this->sectionRepository->delete($sectionId);
     }
 
-    public function attachQuestion(string $testId, string $sectionId, AttachTestSectionQuestionDTO $dto): array
+    public function attachQuestion(string $testId, string $sectionId, string $tenantId, AttachTestSectionQuestionDTO $dto): array
     {
-        $record = DB::transaction(function () use ($testId, $sectionId, $dto) {
+        $record = DB::transaction(function () use ($testId, $sectionId, $tenantId, $dto) {
             $section = $this->sectionRepository->findById($sectionId);
 
             if (!$section || $section->test_id !== $testId) {
@@ -256,7 +249,7 @@ class TestService extends BaseService
                 ]);
             }
 
-            $test = $this->testRepository->findById($testId);
+            $test = $this->resolveTestOrFail($testId, $tenantId);
             $this->ensureDraftTest($test);
 
             $question = $this->questionRepository->findById($dto->question_id);
@@ -301,6 +294,7 @@ class TestService extends BaseService
         string $testId,
         string $sectionId,
         string $sectionQuestionId,
+        string $tenantId,
         UpdateTestSectionQuestionDTO $dto
     ): array {
         $section = $this->sectionRepository->findById($sectionId);
@@ -311,7 +305,7 @@ class TestService extends BaseService
             ]);
         }
 
-        $test = $this->testRepository->findById($testId);
+        $test = $this->resolveTestOrFail($testId, $tenantId);
         $this->ensureDraftTest($test);
 
         $record = $this->sectionQuestionRepository->findById($sectionQuestionId);
@@ -340,7 +334,7 @@ class TestService extends BaseService
         ];
     }
 
-    public function deleteSectionQuestion(string $testId, string $sectionId, string $sectionQuestionId): void
+    public function deleteSectionQuestion(string $testId, string $sectionId, string $sectionQuestionId, string $tenantId): void
     {
         $section = $this->sectionRepository->findById($sectionId);
 
@@ -350,7 +344,7 @@ class TestService extends BaseService
             ]);
         }
 
-        $test = $this->testRepository->findById($testId);
+        $test = $this->resolveTestOrFail($testId, $tenantId);
         $this->ensureDraftTest($test);
 
         $record = $this->sectionQuestionRepository->findById($sectionQuestionId);
@@ -443,5 +437,18 @@ class TestService extends BaseService
                 'test' => ['Published tests cannot be modified.'],
             ]);
         }
+    }
+
+    private function resolveTestOrFail(string $testId, string $tenantId): Test
+    {
+        $test = $this->testRepository->findByIdAndTenant($testId, $tenantId);
+
+        if (!$test) {
+            throw ValidationException::withMessages([
+                'test' => ['Test not found.'],
+            ]);
+        }
+
+        return $test;
     }
 }

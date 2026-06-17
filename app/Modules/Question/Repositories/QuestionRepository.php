@@ -6,7 +6,6 @@ use App\Shared\Repositories\BaseRepository;
 use App\Modules\Question\Repositories\Contracts\QuestionRepositoryInterface;
 use App\Modules\Question\Models\Question;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 
 class QuestionRepository extends BaseRepository implements QuestionRepositoryInterface
 {
@@ -18,6 +17,14 @@ class QuestionRepository extends BaseRepository implements QuestionRepositoryInt
     public function findById(string $id)
     {
         return $this->model->find($id);
+    }
+
+    public function findByIdAndTenant(string $id, string $tenantId)
+    {
+        return $this->model
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
     }
 
     public function create(array $attributes)
@@ -40,30 +47,84 @@ class QuestionRepository extends BaseRepository implements QuestionRepositoryInt
         $this->model->destroy($id);
     }
 
+    public function updateByTenant(string $id, string $tenantId, array $attributes)
+    {
+        $question = $this->model
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
+
+        if ($question) {
+            $question->update($attributes);
+        }
+
+        return $question;
+    }
+
+    public function deleteByTenant(string $id, string $tenantId): void
+    {
+        $question = $this->model
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
+
+        if ($question) {
+            $question->delete();
+        }
+    }
+
     public function listByTenant(
         string $tenantId,
         int $page = 1,
-        int $perPage = 15
-    ): LengthAwarePaginator
-    {
-        return $this->model
-            ->where('tenant_id', $tenantId)
-            ->paginate($perPage, ['*'], 'page', $page);
+        int $perPage = 15,
+        array $filters = []
+    ): LengthAwarePaginator {
+        $query = $this->model->where('tenant_id', $tenantId);
+
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('content', 'like', '%' . $search . '%')
+                    ->orWhere('type', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filters['tags']) && is_array($filters['tags'])) {
+            foreach ($filters['tags'] as $tag) {
+                $query->whereJsonContains('tags', $tag);
+            }
+        }
+
+        return $query->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model
-            ->where('tenant_id', $tenantId)
-            ->where('status', $status)
-            ->paginate($perPage, ['*'], 'page', $page);
+        return $this->listByTenant($tenantId, $page, $perPage, [
+            'status' => $status,
+        ]);
     }
 
     public function listByTags(string $tenantId, array $tags, int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
+        return $this->listByTenant($tenantId, $page, $perPage, [
+            'tags' => $tags,
+        ]);
+    }
+
+    public function bulkUpdateByTenantAndIds(string $tenantId, array $questionIds, array $attributes): int
+    {
         return $this->model
             ->where('tenant_id', $tenantId)
-            ->whereJsonContains('tags', $tags)
-            ->paginate($perPage, ['*'], 'page', $page);
+            ->whereIn('id', $questionIds)
+            ->update($attributes);
     }
 }

@@ -17,6 +17,10 @@ class CreateTestSectionRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'instructions' => ['sometimes', 'nullable', 'string'],
             'position' => ['required', 'integer', 'min:1'],
+            'questions' => ['sometimes', 'array'],
+            'questions.*.question_id' => ['required_with:questions', 'uuid', 'exists:questions,id'],
+            'questions.*.position' => ['required_with:questions', 'integer', 'min:1'],
+            'questions.*.score_override' => ['sometimes', 'nullable', 'integer', 'min:1'],
         ];
     }
 }

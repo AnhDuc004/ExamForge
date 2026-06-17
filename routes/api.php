@@ -2,24 +2,28 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware(['api'])->group(function () {
+Route::prefix('v1')->group(function () {
+
+    // PUBLIC (no tenant)
     require __DIR__ . '/modules/auth.php';
 
-    require __DIR__ . '/modules/tenant.php';
+    // PROTECTED (tenant-based)
+    Route::middleware([
+        'api',
+        \App\Middleware\ResolveTenantMiddleware::class,
+        'auth:sanctum',
+        \App\Middleware\EnsureActiveUserMiddleware::class,
+    ])->group(function () {
 
-    require __DIR__ . '/modules/user.php';
-
-    require __DIR__ . '/modules/role.php';
-
-    require __DIR__ . '/modules/permission.php';
-
-    require __DIR__ . '/modules/question.php';
-
-    require __DIR__ . '/modules/assignment.php';
-
-    require __DIR__ . '/modules/test.php';
-
-    // Additional module routes can be included here:
-    // require __DIR__ . '/modules/attempt.php';
-    // require __DIR__ . '/modules/answer.php';
+        require __DIR__ . '/modules/tenant.php';
+        require __DIR__ . '/modules/user.php';
+        require __DIR__ . '/modules/role.php';
+        require __DIR__ . '/modules/permission.php';
+        require __DIR__ . '/modules/question.php';
+        require __DIR__ . '/modules/assignment.php';
+        require __DIR__ . '/modules/attempt.php';
+        require __DIR__ . '/modules/grading.php';
+        require __DIR__ . '/modules/report.php';
+        require __DIR__ . '/modules/test.php';
+    });
 });

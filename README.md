@@ -1,66 +1,257 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ExamForge Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend API for ExamForge - Multi-tenant Online Examination Platform.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+* Laravel 12
+* PHP 8.3
+* PostgreSQL 17
+* Docker & Docker Compose
+* PgAdmin
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Prerequisites
 
-## Learning Laravel
+Before running the project, make sure you have installed:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+* Git
+* Docker Desktop
+* Docker Compose
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Verify installation:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+docker --version
+docker compose version
+git --version
+```
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Clone Repository
 
-### Premium Partners
+```bash
+git clone https://github.com/AnhDuc004/BE-ExamForge.git
+cd BE-ExamForge
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+---
 
-## Contributing
+## Environment Setup
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Copy the environment file:
 
-## Code of Conduct
+```bash
+cp .env.example .env
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+If you are using Windows PowerShell:
 
-## Security Vulnerabilities
+```powershell
+copy .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## Configure Database
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Update the following values in `.env`:
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=postgres
+DB_PORT=5432
+DB_DATABASE=examforge
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+```
+
+---
+
+## Start Docker Containers
+
+Build and start all services:
+
+```bash
+docker compose up -d --build
+```
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+Expected services:
+
+* examforge-app
+* examforge-postgres
+* examforge-pgadmin
+
+---
+
+## Install Dependencies
+
+Enter Laravel container:
+
+```bash
+docker exec app bash
+```
+
+Install packages:
+
+```bash
+composer install
+```
+
+Generate application key:
+
+```bash
+php artisan key:generate
+```
+
+Run database migrations:
+
+```bash
+php artisan migrate
+```
+
+(Optional)
+
+```bash
+php artisan db:seed
+```
+
+Exit container:
+
+```bash
+exit
+```
+
+---
+
+## Access Application
+
+Laravel API:
+
+```text
+http://localhost:8000
+```
+
+PgAdmin:
+
+```text
+http://localhost:5050
+```
+
+Login credentials:
+
+```text
+Email: admin@examforge.com
+Password: admin123
+```
+
+PostgreSQL Connection:
+
+```text
+Host: postgres
+Port: 5432
+Database: examforge
+Username: postgres
+Password: postgres
+```
+
+---
+
+## Useful Commands
+
+Start containers:
+
+```bash
+docker compose up -d
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+View logs:
+
+```bash
+docker compose logs -f
+```
+
+Access application container:
+
+```bash
+docker exec -it examforge-app bash
+```
+
+Run migrations:
+
+```bash
+php artisan migrate
+```
+
+Clear cache:
+
+```bash
+php artisan optimize:clear
+```
+
+---
+
+## Project Structure
+
+```text
+app/
+bootstrap/
+config/
+database/
+routes/
+storage/
+tests/
+Dockerfile
+docker-compose.yml
+```
+
+---
+
+## Development Workflow
+
+1. Pull latest code
+
+```bash
+git pull origin main
+```
+
+2. Create feature branch
+
+```bash
+git checkout -b feature/feature-name
+```
+
+3. Commit changes
+
+```bash
+git add .
+git commit -m "feat: description"
+```
+
+4. Push branch
+
+```bash
+git push origin feature/feature-name
+```
+
+5. Create Pull Request
+
+---
+
+## Team
+
+ExamForge Development Team

@@ -12,12 +12,12 @@ class RolesAndPermissionsSeeder extends Seeder
      * Permissions: [resource => [action, ...]]
      */
     private array $permissions = [
-        'questions'   => ['create', 'publish'],
-        'tests'       => ['build', 'publish'],
+        'questions'   => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
+        'tests'       => ['view', 'build', 'publish'],
         'assignments' => ['manage'],
         'grading'     => ['review'],
         'users'       => ['manage'],
-        'tenant'      => ['settings'],
+        'tenant'      => ['settings', 'manage'],
         'audit'       => ['view'],
     ];
 
@@ -26,21 +26,33 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private array $roles = [
         'Tenant Admin' => [
+            ['questions',   'view'],
             ['questions',   'create'],
+            ['questions',   'update'],
+            ['questions',   'delete'],
             ['questions',   'publish'],
+            ['questions',   'archive'],
+            ['tests',       'view'],
             ['tests',       'build'],
             ['tests',       'publish'],
             ['assignments', 'manage'],
             ['grading',     'review'],
             ['users',       'manage'],
             ['tenant',      'settings'],
+            ['tenant',      'manage'],
             ['audit',       'view'],
         ],
         'Question Creator' => [
+            ['questions', 'view'],
             ['questions', 'create'],
+            ['questions', 'update'],
+            ['questions', 'delete'],
             ['questions', 'publish'],
+            ['questions', 'archive'],
+            ['tests',     'view'],
             ['tests',     'build'],
             ['tests',     'publish'],
+            ['assignments', 'manage'],
         ],
         'Reviewer' => [
             ['grading', 'review'],
@@ -89,12 +101,12 @@ class RolesAndPermissionsSeeder extends Seeder
             $role->permissions()->sync($permissionIds);
         }
 
-        $this->command->info('✅  Roles and permissions seeded successfully.');
+        $this->command->info('Roles and permissions seeded successfully.');
         $this->command->table(
             ['Role', 'Permissions'],
             [
-                ['Tenant Admin',     'All (9 permissions)'],
-                ['Question Creator', 'questions.create, questions.publish, tests.build, tests.publish'],
+                ['Tenant Admin',     'All tenant permissions'],
+                ['Question Creator', 'questions.*, tests.view/build/publish, assignments.manage'],
                 ['Reviewer',         'grading.review'],
                 ['Assignee',         'assignments.manage'],
                 ['Student',          '— (none)'],
@@ -106,7 +118,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         return match ($role) {
             'Tenant Admin'     => 'Full access to all resources within the tenant.',
-            'Question Creator' => 'Can create, publish questions and build/publish tests.',
+            'Question Creator' => 'Can view, create, update, delete, publish and archive questions, plus build/publish tests.',
             'Reviewer'         => 'Can review and grade student submissions.',
             'Assignee'         => 'Can manage and assign tests to students.',
             'Student'          => 'Access to assigned tests and own submissions only.',

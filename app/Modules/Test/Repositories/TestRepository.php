@@ -18,6 +18,15 @@ class TestRepository extends BaseRepository implements TestRepositoryInterface
         return $this->model->with(['creator', 'sections.questions.question'])->where('id', $id)->first();
     }
 
+    public function findByIdAndTenant(string $id, string $tenantId)
+    {
+        return $this->model
+            ->with(['creator', 'sections.questions.question'])
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
+    }
+
     public function create(array $attributes)
     {
         return $this->model->create($attributes);
@@ -36,6 +45,32 @@ class TestRepository extends BaseRepository implements TestRepositoryInterface
     public function delete(string $id): void
     {
         $test = $this->findById($id);
+        if ($test) {
+            $test->delete();
+        }
+    }
+
+    public function updateByTenant(string $id, string $tenantId, array $attributes)
+    {
+        $test = $this->model
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
+
+        if ($test) {
+            $test->update($attributes);
+        }
+
+        return $test;
+    }
+
+    public function deleteByTenant(string $id, string $tenantId): void
+    {
+        $test = $this->model
+            ->where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->first();
+
         if ($test) {
             $test->delete();
         }

@@ -2,13 +2,15 @@
 
 namespace App\Modules\Question\Services;
 
-use App\Shared\Services\BaseService;
 use App\Modules\Question\DTOs\CreateQuestionDTO;
 use App\Modules\Question\DTOs\UpdateQuestionDTO;
+use App\Shared\Services\BaseService;
 use App\Modules\Question\Repositories\Contracts\QuestionRepositoryInterface;
 use App\Events\QuestionCreated;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class QuestionService extends BaseService
 {
@@ -40,12 +42,86 @@ class QuestionService extends BaseService
         ];
     }
 
-    public function update(string $questionId, UpdateQuestionDTO $dto): array
+    public function bulkImport(string $tenantId, string $userId, array $questions): array
     {
-        $question = $this->questionRepository->findById($questionId);
+        $createdQuestions = [];
+
+        DB::transaction(function () use ($questions, $tenantId, $userId, &$createdQuestions) {
+            foreach ($questions as $index => $payload) {
+                $validator = Validator::make($payload, [
+                    'type' => ['required', 'string', 'in:multiple_choice,short_answer,essay,true_false'],
+                    'content' => ['required', 'string'],
+                    'options' => ['nullable', 'array', 'required_if:type,multiple_choice'],
+                    'options.*' => ['string'],
+                    'correct_answer' => ['nullable', 'array'],
+                    'max_score' => ['required', 'integer', 'min:1', 'max:1000'],
+                    'difficulty' => ['required', 'string', 'in:easy,medium,hard'],
+                    'tags' => ['nullable', 'array'],
+                    'tags.*' => ['string', 'max:50'],
+                ]);
+
+                if ($validator->fails()) {
+                    throw ValidationException::withMessages([
+                        "questions.$index" => $validator->errors()->all(),
+                    ]);
+                }
+
+                $result = $this->create(
+                    new CreateQuestionDTO($payload),
+                    $tenantId,
+                    $userId
+                );
+
+                $createdQuestions[] = $result['question'];
+            }
+        });
+
+        return [
+            'questions' => $createdQuestions,
+            'created_count' => count($createdQuestions),
+            'message' => 'Questions imported successfully',
+        ];
+    }
+
+    public function bulkUpdate(string $tenantId, array $questionIds, array $attributes): array
+    {
+        $allowedAttributes = array_intersect_key($attributes, array_flip(['tags', 'difficulty']));
+
+        if (empty($allowedAttributes)) {
+            throw ValidationException::withMessages([
+                'tags' => ['No updateable attributes were provided.'],
+            ]);
+        }
+
+        $missingIds = [];
+        foreach ($questionIds as $questionId) {
+            if (!$this->questionRepository->findByIdAndTenant($questionId, $tenantId)) {
+                $missingIds[] = $questionId;
+            }
+        }
+
+        if (!empty($missingIds)) {
+            throw ValidationException::withMessages([
+                'question_ids' => ['One or more questions were not found in the current tenant.'],
+            ]);
+        }
+
+        $updated = $this->questionRepository->bulkUpdateByTenantAndIds($tenantId, $questionIds, $allowedAttributes);
+
+        return [
+            'updated_count' => $updated,
+            'message' => 'Questions updated successfully',
+        ];
+    }
+
+    public function update(string $questionId, string $tenantId, UpdateQuestionDTO $dto): array
+    {
+        $question = $this->questionRepository->findByIdAndTenant($questionId, $tenantId);
 
         if (!$question) {
-            throw new \Exception('Question not found', 404);
+            throw ValidationException::withMessages([
+                'question' => ['Question not found.'],
+            ]);
         }
 
         $attributes = [];
@@ -75,7 +151,7 @@ class QuestionService extends BaseService
             $attributes['status'] = $dto->status;
         }
 
-        $updated = $this->questionRepository->update($questionId, $attributes);
+        $updated = $this->questionRepository->updateByTenant($questionId, $tenantId, $attributes);
 
         return [
             'question' => $updated,
@@ -83,12 +159,14 @@ class QuestionService extends BaseService
         ];
     }
 
-    public function getById(string $questionId): array
+    public function getById(string $questionId, string $tenantId): array
     {
-        $question = $this->questionRepository->findById($questionId);
+        $question = $this->questionRepository->findByIdAndTenant($questionId, $tenantId);
 
         if (!$question) {
-            throw new \Exception('Question not found', 404);
+            throw ValidationException::withMessages([
+                'question' => ['Question not found.'],
+            ]);
         }
 
         return [
@@ -96,9 +174,9 @@ class QuestionService extends BaseService
         ];
     }
 
-    public function list(string $tenantId, int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(string $tenantId, int $page = 1, int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        return $this->questionRepository->listByTenant($tenantId, $page, $perPage);
+        return $this->questionRepository->listByTenant($tenantId, $page, $perPage, $filters);
     }
 
     public function listByStatus(string $tenantId, string $status, int $page = 1, int $perPage = 15): LengthAwarePaginator
@@ -111,30 +189,36 @@ class QuestionService extends BaseService
         return $this->questionRepository->listByTags($tenantId, $tags, $page, $perPage);
     }
 
-    public function delete(string $questionId): void
+    public function delete(string $questionId, string $tenantId): void
     {
-        $question = $this->questionRepository->findById($questionId);
+        $question = $this->questionRepository->findByIdAndTenant($questionId, $tenantId);
 
         if (!$question) {
-            throw new \Exception('Question not found', 404);
+            throw ValidationException::withMessages([
+                'question' => ['Question not found.'],
+            ]);
         }
 
-        $this->questionRepository->delete($questionId);
+        $this->questionRepository->deleteByTenant($questionId, $tenantId);
     }
 
-    public function publish(string $questionId): array
+    public function publish(string $questionId, string $tenantId): array
     {
-        $question = $this->questionRepository->findById($questionId);
+        $question = $this->questionRepository->findByIdAndTenant($questionId, $tenantId);
 
         if (!$question) {
-            throw new \Exception('Question not found', 404);
+            throw ValidationException::withMessages([
+                'question' => ['Question not found.'],
+            ]);
         }
 
         if ($question->status === 'published') {
-            throw new \Exception('Question is already published', 400);
+            throw ValidationException::withMessages([
+                'question' => ['Question is already published.'],
+            ]);
         }
 
-        $updated = $this->questionRepository->update($questionId, ['status' => 'published']);
+        $updated = $this->questionRepository->updateByTenant($questionId, $tenantId, ['status' => 'published']);
 
         return [
             'question' => $updated,
@@ -142,15 +226,17 @@ class QuestionService extends BaseService
         ];
     }
 
-    public function archive(string $questionId): array
+    public function archive(string $questionId, string $tenantId): array
     {
-        $question = $this->questionRepository->findById($questionId);
+        $question = $this->questionRepository->findByIdAndTenant($questionId, $tenantId);
 
         if (!$question) {
-            throw new \Exception('Question not found', 404);
+            throw ValidationException::withMessages([
+                'question' => ['Question not found.'],
+            ]);
         }
 
-        $updated = $this->questionRepository->update($questionId, ['status' => 'archived']);
+        $updated = $this->questionRepository->updateByTenant($questionId, $tenantId, ['status' => 'archived']);
 
         return [
             'question' => $updated,

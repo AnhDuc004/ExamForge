@@ -2,6 +2,7 @@
 
 namespace App\Modules\Assignment\Services;
 
+use App\Events\AssignmentCreated;
 use App\Modules\Assignment\DTOs\CreateAssignmentDTO;
 use App\Modules\Assignment\DTOs\UpdateAssignmentDTO;
 use App\Modules\Assignment\Models\Assignment;
@@ -92,6 +93,8 @@ class AssignmentService
                 'max_attempts' => $dto->max_attempts,
                 'status' => 'assigned',
             ]);
+
+            AssignmentCreated::dispatch($assignment->id);
 
             return [
                 'assignment' => $this->assignmentRepository->findById($assignment->id),

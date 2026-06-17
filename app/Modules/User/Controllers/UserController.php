@@ -7,6 +7,7 @@ use App\Modules\User\DTOs\CreateUserDTO;
 use App\Modules\User\DTOs\UpdateUserDTO;
 use App\Modules\User\Requests\CreateUserRequest;
 use App\Modules\User\Requests\UpdateUserRequest;
+use App\Modules\User\Requests\UpdateUserStatusRequest;
 use App\Modules\User\Resources\UserResource;
 use App\Modules\User\Services\UserService;
 use App\Traits\ApiResponse;
@@ -26,8 +27,9 @@ class UserController extends Controller
         $tenantId = $request->query('tenant_id');
         $page = (int) $request->query('page', 1);
         $perPage = (int) $request->query('per_page', 15);
+        $search = $request->query('search');
 
-        $users = $this->userService->list($tenantId, $page, $perPage);
+        $users = $this->userService->list($tenantId, $page, $perPage, $search);
 
         return response()->json(
             $this->successResponse('Users retrieved', [
@@ -95,6 +97,15 @@ class UserController extends Controller
 
         return response()->json(
             $this->successResponse('User updated successfully', new UserResource($user))
+        );
+    }
+
+    public function updateStatus(string $id, UpdateUserStatusRequest $request): JsonResponse
+    {
+        $user = $this->userService->updateStatus($id, $request->boolean('is_active'));
+
+        return response()->json(
+            $this->successResponse('User status updated successfully', new UserResource($user))
         );
     }
 
