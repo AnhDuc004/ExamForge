@@ -90,7 +90,7 @@ paths:
     post:
       tags: [Auth]
       summary: Đăng ký tài khoản
-      description: Tạo người dùng mới và cấp token đăng nhập ngay sau khi tạo. Có thể kèm tenant qua subdomain hoặc header `X-Tenant-ID`.
+      description: Tạo người dùng mới và cấp token đăng nhập ngay sau khi tạo. Có thể kèm tenant qua subdomain hoặc header `X-Tenant-ID`. Nếu có `invitation_token`, hệ thống sẽ đăng ký theo link mời và tự gán role `Student`.
       security: []
       parameters:
         - $ref: '#/components/parameters/XTenantID'
@@ -129,6 +129,88 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/TenantNotFoundMessage'
+
+  /auth/student-invitations:
+    post:
+      tags: [Auth]
+      summary: Tạo link mời student
+      description: Teacher hoặc admin tạo link mời để student tự đăng ký. Invitation sẽ có hạn dùng và chỉ sử dụng một lần.
+      parameters:
+        - $ref: '#/components/parameters/XTenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentInvitationCreateRequest'
+      responses:
+        '201':
+          description: Tạo invitation thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentInvitationData'
+              example:
+                success: true
+                message: Student invitation created
+                data:
+                  invitation:
+                    id: 1f2c3d4e-1111-2222-3333-444455556666
+                    email: student@example.com
+                    token: 8b3f1f2e0b5f4d63a5b5a8b8c7f9d1a2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8
+                    invite_url: https://frontend.example.com/register?invite=8b3f1f2e0b5f4d63a5b5a8b8c7f9d1a2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8
+                    expires_at: '2026-06-25T10:00:00.000000Z'
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+
+  /auth/student-invitations/{token}:
+    get:
+      tags: [Auth]
+      summary: Kiểm tra link mời student
+      description: FE dùng endpoint này để verify invitation token trước khi hiển thị form đăng ký.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Invitation token nhận từ link mời.
+      responses:
+        '200':
+          description: Invitation hợp lệ
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StudentInvitationLookupData'
+              example:
+                success: true
+                message: Invitation retrieved
+                data:
+                  invitation:
+                    id: 1f2c3d4e-1111-2222-3333-444455556666
+                    email: student@example.com
+                    tenant_id: 0f1e2d3c-4444-5555-6666-777788889999
+                    expires_at: '2026-06-25T10:00:00.000000Z'
+                    used_at: null
+                    is_expired: false
+                    is_used: false
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
 
   /auth/logout:
     post:
@@ -3247,6 +3329,80 @@ components:
           type: string
           maxLength: 255
           nullable: true
+        invitation_token:
+          type: string
+          nullable: true
+          description: Token từ link mời student. Nếu có field này thì user sẽ được tạo với role `Student`.
+
+    StudentInvitationCreateRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email student được mời. Có thể để trống trong trường hợp link dùng chung.
+        expires_in_days:
+          type: integer
+          minimum: 1
+          maximum: 30
+          nullable: true
+          description: Số ngày hiệu lực của invitation, mặc định 7 ngày.
+
+    StudentInvitationData:
+      type: object
+      required: [invitation]
+      properties:
+        invitation:
+          type: object
+          required: [id, token, invite_url]
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+              nullable: true
+            token:
+              type: string
+            invite_url:
+              type: string
+            expires_at:
+              type: string
+              format: date-time
+              nullable: true
+
+    StudentInvitationLookupData:
+      type: object
+      required: [invitation]
+      properties:
+        invitation:
+          type: object
+          required: [id, tenant_id, is_expired, is_used]
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+              nullable: true
+            tenant_id:
+              type: string
+              format: uuid
+            expires_at:
+              type: string
+              format: date-time
+              nullable: true
+            used_at:
+              type: string
+              format: date-time
+              nullable: true
+            is_expired:
+              type: boolean
+            is_used:
+              type: boolean
 
     RefreshRequest:
       type: object

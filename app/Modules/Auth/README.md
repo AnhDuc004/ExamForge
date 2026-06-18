@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Auth module handles user authentication and authorization using **Laravel Sanctum** for token-based API authentication. It provides endpoints for user login, registration, token management, and profile access.
+The Auth module handles user authentication and authorization using **Laravel Sanctum** for token-based API authentication. It provides endpoints for user login, registration, student invitations, token management, and profile access.
 
 ## Architecture
 
@@ -24,6 +24,7 @@ Eloquent Model (User)
 
 - **User Login**: Authenticate with email and password; receive API token
 - **User Registration**: Create new account; assigned to default or specified tenant
+- **Student Invitation Signup**: Teacher/admin generates a link and student registers through that invite
 - **Token Refresh**: Revoke current token and issue new one
 - **Logout**: Revoke current token
 - **Revoke All Tokens**: Revoke all active tokens for user
@@ -66,7 +67,8 @@ Content-Type: application/json
   "display_name": "John Doe",
   "password": "password123",
   "password_confirmation": "password123",
-  "device_name": "iPhone"  // optional
+  "device_name": "iPhone",  // optional
+  "invitation_token": "optional-invite-token"
 }
 
 Response: 201 Created
@@ -81,9 +83,59 @@ Response: 201 Created
 }
 ```
 
+#### 3. Create Student Invitation
+```http
+POST /api/v1/auth/student-invitations
+Authorization: Bearer {teacher_or_admin_token}
+X-Tenant-ID: {tenant_id}
+Content-Type: application/json
+
+{
+  "email": "student@example.com",
+  "expires_in_days": 7
+}
+
+Response: 201 Created
+{
+  "success": true,
+  "message": "Student invitation created",
+  "data": {
+    "invitation": {
+      "id": "uuid",
+      "email": "student@example.com",
+      "token": "invite-token",
+      "invite_url": "https://frontend/register?invite=invite-token",
+      "expires_at": "2026-06-25T10:00:00Z"
+    }
+  }
+}
+```
+
+#### 4. Check Student Invitation
+```http
+GET /api/v1/auth/student-invitations/{token}
+
+Response: 200 OK
+{
+  "success": true,
+  "message": "Invitation retrieved",
+  "data": {
+    "invitation": {
+      "id": "uuid",
+      "email": "student@example.com",
+      "tenant_id": "uuid",
+      "expires_at": "2026-06-25T10:00:00Z",
+      "used_at": null,
+      "is_expired": false,
+      "is_used": false
+    }
+  }
+}
+```
+
 ### Protected Endpoints (require `auth:sanctum`)
 
-#### 3. Get Current User Profile
+#### 5. Get Current User Profile
 ```http
 GET /api/v1/auth/me
 Authorization: Bearer {token}
@@ -103,7 +155,7 @@ Response: 200 OK
 }
 ```
 
-#### 4. Logout
+#### 6. Logout
 ```http
 POST /api/v1/auth/logout
 Authorization: Bearer {token}
@@ -115,7 +167,7 @@ Response: 200 OK
 }
 ```
 
-#### 5. Refresh Token
+#### 7. Refresh Token
 ```http
 POST /api/v1/auth/refresh
 Authorization: Bearer {token}
@@ -137,7 +189,7 @@ Response: 200 OK
 }
 ```
 
-#### 6. Revoke All Tokens
+#### 8. Revoke All Tokens
 ```http
 POST /api/v1/auth/revoke-all
 Authorization: Bearer {token}
@@ -161,6 +213,11 @@ Response: 200 OK
 - `display_name`: required, max 255 characters
 - `password`: required, minimum 8 characters, must be confirmed
 - `device_name`: optional, max 255 characters
+- `invitation_token`: optional, string; if present, registration uses student invitation flow and assigns role `Student`
+
+### StudentInvitationCreateRequest
+- `email`: required, valid email
+- `expires_in_days`: optional, integer between 1 and 30, default 7
 
 ## Error Handling
 
@@ -194,7 +251,13 @@ All auth errors return standardized JSON responses:
 - `email: string`
 - `display_name: string`
 - `password: string`
+- `tenant_id?: string`
+- `invitation_token?: string`
 - `device_name?: string`
+
+### CreateStudentInvitationDTO
+- `email: string`
+- `expires_in_days?: int`
 
 ## Services
 
@@ -202,7 +265,9 @@ All auth errors return standardized JSON responses:
 
 Methods:
 - `login(LoginDTO $dto, ?string $tenantId): array` - Authenticate user and issue token
-- `register(RegisterDTO $dto, ?string $tenantId): array` - Create user and issue token
+- `register(RegisterDTO $dto, ?string $tenantId): array` - Create user and issue token, or use invitation token to create a Student account
+- `createStudentInvitation(CreateStudentInvitationDTO $dto, string $tenantId, $invitedBy): array` - Create a student invite link
+- `getStudentInvitation(string $token): array` - Inspect invitation status for the frontend
 - `logout($user): void` - Revoke current token
 - `revokeAllTokens($user): void` - Revoke all user tokens
 - `refreshToken($user, ?string $deviceName): array` - Issue new token
@@ -277,6 +342,30 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
     "display_name": "Test User",
     "password": "password123",
     "password_confirmation": "password123"
+  }'
+
+# Create student invitation
+curl -X POST http://localhost:8000/api/v1/auth/student-invitations \
+  -H "Authorization: Bearer YOUR_TEACHER_OR_ADMIN_TOKEN" \
+  -H "X-Tenant-ID: YOUR_TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "expires_in_days": 7
+  }'
+
+# Check invitation
+curl -X GET http://localhost:8000/api/v1/auth/student-invitations/YOUR_INVITE_TOKEN
+
+# Register from invitation
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "display_name": "Student One",
+    "password": "password123",
+    "password_confirmation": "password123",
+    "invitation_token": "YOUR_INVITE_TOKEN"
   }'
 
 # Login

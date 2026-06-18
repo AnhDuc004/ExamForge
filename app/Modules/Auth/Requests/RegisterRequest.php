@@ -18,6 +18,7 @@ class RegisterRequest extends FormRequest
             'display_name' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'device_name' => ['nullable', 'string', 'max:255'],
+            'invitation_token' => ['nullable', 'string'],
         ];
     }
 

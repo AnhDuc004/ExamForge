@@ -5,6 +5,8 @@ namespace App\Modules\Auth\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Auth\DTOs\LoginDTO;
 use App\Modules\Auth\DTOs\RegisterDTO;
+use App\Modules\Auth\DTOs\CreateStudentInvitationDTO;
+use App\Modules\Auth\Requests\CreateStudentInvitationRequest;
 use App\Modules\Auth\Requests\LoginRequest;
 use App\Modules\Auth\Requests\RegisterRequest;
 use App\Modules\Auth\Resources\UserResource;
@@ -56,6 +58,7 @@ class AuthController extends Controller
             'password' => $request->password,
             'device_name' => $request->device_name,
             'tenant_id' => null,
+            'invitation_token' => $request->invitation_token,
         ]);
 
         $result = $this->authService->register($dto, $tenantIdentifier, $tenantIdentifier !== null);
@@ -71,6 +74,50 @@ class AuthController extends Controller
             ),
             201
         );
+    }
+
+    public function createStudentInvitation(CreateStudentInvitationRequest $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        try {
+            $dto = new CreateStudentInvitationDTO([
+                'email' => $request->email,
+                'expires_in_days' => $request->expires_in_days ?? 7,
+            ]);
+
+            $result = $this->authService->createStudentInvitation($dto, $tenantId, $request->user());
+
+            return response()->json(
+                $this->successResponse('Student invitation created', $result),
+                201
+            );
+        } catch (\Throwable $e) {
+            return response()->json(
+                $this->errorResponse($e->getMessage()),
+                400
+            );
+        }
+    }
+
+    public function showStudentInvitation(string $token): JsonResponse
+    {
+        try {
+            $result = $this->authService->getStudentInvitation($token);
+
+            return response()->json(
+                $this->successResponse('Invitation retrieved', $result)
+            );
+        } catch (\Throwable $e) {
+            return response()->json(
+                $this->errorResponse($e->getMessage()),
+                400
+            );
+        }
     }
 
     public function logout(Request $request): JsonResponse
