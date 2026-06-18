@@ -30,14 +30,15 @@ class AssignmentController extends Controller
         }
 
         try {
-            $dto = new CreateAssignmentDTO([
-                'test_id' => $request->test_id,
-                'assignee_id' => $request->assignee_id,
-                'assigned_by' => $request->user()->id,
-                'access_type' => $request->access_type,
-                'due_at' => $request->due_at,
-                'max_attempts' => $request->max_attempts ?? 1,
-            ]);
+            $dto = new CreateAssignmentDTO(
+                test_id: $request->test_id,
+                assignee_id: $request->assignee_id,
+                assignee_ids: $request->assignee_ids,
+                assigned_by: $request->user()->id,
+                access_type: $request->access_type,
+                due_at: $request->due_at,
+                max_attempts: $request->max_attempts ?? 1,
+            );
 
             $result = $this->assignmentService->create($dto, $tenantId);
 
@@ -45,8 +46,10 @@ class AssignmentController extends Controller
                 $this->successResponse(
                     $result['message'],
                     array_filter([
-                        'assignment' => new AssignmentResource($result['assignment']),
+                        'assignment' => isset($result['assignment']) ? new AssignmentResource($result['assignment']) : null,
+                        'assignments' => isset($result['assignments']) ? AssignmentResource::collection($result['assignments']) : null,
                         'access_token' => $result['access_token'],
+                        'access_tokens' => $result['access_tokens'] ?? null,
                     ], fn ($value) => $value !== null)
                 ),
                 201

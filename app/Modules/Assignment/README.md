@@ -40,7 +40,7 @@ Eloquent Model (Assignment)
 
 #### 1. List Assignments
 ```http
-GET /api/v1/assignments?page=1&per_page=15&user_id={optional_user_id}
+GET /api/v1/assignments?page=1&per_page=15&assignee_id={optional_user_id}
 Authorization: Bearer {token}
 X-Tenant-ID: {tenant_id}
 
@@ -53,12 +53,12 @@ Response: 200 OK
       {
         "id": "uuid",
         "tenant_id": "uuid",
-        "user_id": "uuid",
+        "assignee_id": "uuid",
+        "assigned_by": "uuid",
         "test_id": "uuid",
-        "due_date": "2026-06-30 23:59:59",
-        "access_token": null,
+        "due_at": "2026-06-30T23:59:59.000000Z",
+        "access_type": "account",
         "max_attempts": 3,
-        "current_attempts": 1,
         "status": "started",
         "created_at": "2026-06-09T...",
         "updated_at": "2026-06-09T..."
@@ -103,9 +103,10 @@ Required Permissions: assignment:create
 
 {
   "test_id": "uuid",
-  "user_id": "uuid",
-  "due_date": "2026-06-30 23:59:59",
-  "max_attempts": 3
+  "assignee_id": "uuid",
+  "due_at": "2026-06-30 23:59:59",
+  "max_attempts": 3,
+  "access_type": "account"
 }
 
 Response: 201 Created
@@ -121,6 +122,18 @@ Response: 201 Created
 
 **Note:** The `access_token` is returned **only once** at creation. Store it securely. It will not be returned in subsequent API calls. The stored token in DB is SHA256-hashed.
 
+You can also assign the same test to multiple students in one request:
+
+```json
+{
+  "test_id": "uuid",
+  "assignee_ids": ["uuid-1", "uuid-2", "uuid-3"],
+  "due_at": "2026-06-30 23:59:59",
+  "max_attempts": 3,
+  "access_type": "account"
+}
+```
+
 #### 4. Update Assignment
 ```http
 PUT /api/v1/assignments/{id}
@@ -130,7 +143,7 @@ Content-Type: application/json
 Required Permissions: assignment:update
 
 {
-  "due_date": "2026-06-30 23:59:59",
+  "due_at": "2026-06-30 23:59:59",
   "max_attempts": 5,
   "status": "started"
 }
@@ -176,10 +189,9 @@ Response: 200 OK
   "data": {
     "id": "uuid",
     "tenant_id": "uuid",
-    "user_id": "uuid",
+    "assignee_id": "uuid",
     "test_id": "uuid",
     "status": "assigned",
-    "current_attempts": 0,
     "max_attempts": 3
   }
 }
@@ -215,16 +227,20 @@ Response: 200 OK
 
 **Rules:**
 - `test_id`: required, uuid, must exist in tests table
-- `user_id`: required, uuid, must exist in users table
-- `due_date`: nullable, date_format Y-m-d H:i:s, must be after now
+- `assignee_id`: required when `assignee_ids` is missing, uuid, must exist in users table
+- `assignee_ids`: required when `assignee_id` is missing, array of uuid values, must contain at least one student
+- `due_at`: nullable, date_format Y-m-d H:i:s, must be after now
 - `max_attempts`: nullable, integer (1-100, default: 1)
 
 **Example:**
 ```json
 {
   "test_id": "550e8400-e29b-41d4-a716-446655440000",
-  "user_id": "650e8400-e29b-41d4-a716-446655440001",
-  "due_date": "2026-06-30 23:59:59",
+  "assignee_ids": [
+    "650e8400-e29b-41d4-a716-446655440001",
+    "650e8400-e29b-41d4-a716-446655440002"
+  ],
+  "due_at": "2026-06-30 23:59:59",
   "max_attempts": 3
 }
 ```
@@ -245,8 +261,9 @@ Response: 200 OK
 
 ### CreateAssignmentDTO
 - `test_id: string` (UUID, must be published test)
-- `user_id: string` (UUID, must be valid user)
-- `due_date?: string` (Y-m-d H:i:s format, nullable)
+- `assignee_id?: string` (UUID, for single student assignment)
+- `assignee_ids?: array<string>` (UUID list, for bulk assignment)
+- `due_at?: string` (Y-m-d H:i:s format, nullable)
 - `max_attempts?: int` (default: 1, 1-100)
 
 ### UpdateAssignmentDTO
@@ -265,7 +282,7 @@ create(CreateAssignmentDTO $dto, string $tenantId): array
 ```
 Create new assignment. Validates:
 - Test exists and is published
-- No duplicate assignment for user+test combo
+- No duplicate assignment for each assignee+test combo
 Generates SHA256-hashed access token.
 Returns access token unencrypted (only time it's readable).
 
@@ -533,8 +550,11 @@ curl -X POST http://localhost:8000/api/v1/assignments \
   -H "Content-Type: application/json" \
   -d '{
     "test_id": "550e8400-e29b-41d4-a716-446655440000",
-    "user_id": "650e8400-e29b-41d4-a716-446655440001",
-    "due_date": "2026-06-30 23:59:59",
+    "assignee_ids": [
+      "650e8400-e29b-41d4-a716-446655440001",
+      "650e8400-e29b-41d4-a716-446655440002"
+    ],
+    "due_at": "2026-06-30 23:59:59",
     "max_attempts": 3
   }'
 
@@ -606,7 +626,7 @@ routes/modules/
 
 ### With User Module
 - Validates user exists
-- Links assignment to user_id
+- Links assignment to `assignee_id`
 
 ### With Attempt Module (upcoming)
 - Called when user starts exam via access token

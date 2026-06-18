@@ -1299,7 +1299,7 @@ paths:
     post:
       tags: [Assignments]
       summary: Tạo phân công
-      description: Tạo assignment cho một học viên và có thể sinh access token nếu dùng kiểu `token`.
+      description: Tạo assignment cho một hoặc nhiều học viên và có thể sinh access token nếu dùng kiểu `token`.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
       requestBody:
@@ -1322,10 +1322,21 @@ paths:
                         type: object
                         properties:
                           assignment:
+                            nullable: true
                             $ref: '#/components/schemas/AssignmentResource'
+                          assignments:
+                            type: array
+                            nullable: true
+                            items:
+                              $ref: '#/components/schemas/AssignmentResource'
                           access_token:
                             type: string
                             nullable: true
+                          access_tokens:
+                            type: object
+                            nullable: true
+                            additionalProperties:
+                              type: string
         '400':
           $ref: '#/components/responses/BadRequestApiError'
         '401':
@@ -3498,7 +3509,7 @@ components:
 
     AssignmentCreateRequest:
       type: object
-      required: [test_id, assignee_id, access_type]
+      required: [test_id, access_type]
       properties:
         test_id:
           type: string
@@ -3506,6 +3517,15 @@ components:
         assignee_id:
           type: string
           format: uuid
+          nullable: true
+          description: Dùng khi gán cho 1 học viên.
+        assignee_ids:
+          type: array
+          nullable: true
+          description: Dùng khi gán cho nhiều học viên.
+          items:
+            type: string
+            format: uuid
         due_at:
           type: string
           format: date-time
