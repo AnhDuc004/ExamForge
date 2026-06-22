@@ -131,9 +131,9 @@ class AssignmentService
         ];
     }
 
-    public function update(string $assignmentId, UpdateAssignmentDTO $dto): array
+    public function update(string $assignmentId, UpdateAssignmentDTO $dto, string $tenantId): array
     {
-        $assignment = $this->assignmentRepository->findById($assignmentId);
+        $assignment = $this->assignmentRepository->findByIdForTenant($assignmentId, $tenantId);
         if (!$assignment) {
             throw ValidationException::withMessages([
                 'assignment' => ['Assignment not found.'],
@@ -179,9 +179,9 @@ class AssignmentService
         ];
     }
 
-    public function getById(string $assignmentId): array
+    public function getById(string $assignmentId, string $tenantId): array
     {
-        $assignment = $this->assignmentRepository->findById($assignmentId);
+        $assignment = $this->assignmentRepository->findByIdForTenant($assignmentId, $tenantId);
         if (!$assignment) {
             throw ValidationException::withMessages([
                 'assignment' => ['Assignment not found.'],
@@ -243,9 +243,9 @@ class AssignmentService
         ];
     }
 
-    public function verifyAccessToken(string $accessTokenHash): array
+    public function verifyAccessToken(string $accessTokenHash, string $tenantId): array
     {
-        $assignment = $this->assignmentRepository->findByAccessToken($accessTokenHash);
+        $assignment = $this->assignmentRepository->findByAccessTokenForTenant($accessTokenHash, $tenantId);
         if (!$assignment) {
             throw ValidationException::withMessages([
                 'access_token' => ['Invalid or expired access token.'],
@@ -265,8 +265,14 @@ class AssignmentService
         ];
     }
 
-    public function delete(string $assignmentId): void
+    public function delete(string $assignmentId, string $tenantId): void
     {
+        if (!$this->assignmentRepository->findByIdForTenant($assignmentId, $tenantId)) {
+            throw ValidationException::withMessages([
+                'assignment' => ['Assignment not found.'],
+            ]);
+        }
+
         $this->assignmentRepository->delete($assignmentId);
     }
 }

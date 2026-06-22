@@ -6,15 +6,10 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class PermissionMiddleware
+class RoleMiddleware
 {
-    public function handle(
-        Request $request,
-        Closure $next,
-        string $resource,
-        string $action
-    ) {
-        \Log::info("Checking permission for {$resource}:{$action}");
+    public function handle(Request $request, Closure $next, string ...$roles)
+    {
         $user = $request->user();
 
         if (!$user) {
@@ -27,9 +22,9 @@ class PermissionMiddleware
             ], Response::HTTP_UNAUTHORIZED);
         }
 
-        $has = $user->hasPermission($resource, $action);
+        $roleList = array_values(array_filter(array_map('trim', $roles)));
 
-        if (!$has) {
+        if (empty($roleList) || !$user->hasAnyRole($roleList)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Forbidden',

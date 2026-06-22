@@ -58,7 +58,9 @@ class AuditLogListener
             'action' => $action,
             'resource_type' => $resourceType,
             'resource_id' => $resourceId,
-            'metadata' => $metadata,
+            'metadata' => array_filter(array_merge($metadata ?? [], [
+                'ip' => request()?->ip(),
+            ]), fn ($value) => $value !== null),
         ]);
     }
 }

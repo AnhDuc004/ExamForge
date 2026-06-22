@@ -6,6 +6,7 @@ Route::prefix('v1')->group(function () {
 
     // PUBLIC (no tenant)
     require __DIR__ . '/modules/auth.php';
+    require __DIR__ . '/modules/assignment_public.php';
 
     // PROTECTED (tenant-based)
     Route::middleware([
@@ -24,6 +25,9 @@ Route::prefix('v1')->group(function () {
         require __DIR__ . '/modules/attempt.php';
         require __DIR__ . '/modules/grading.php';
         require __DIR__ . '/modules/report.php';
+        require __DIR__ . '/modules/audit.php';
+        require __DIR__ . '/modules/ai.php';
+        require __DIR__ . '/modules/health.php';
         require __DIR__ . '/modules/test.php';
     });
 });

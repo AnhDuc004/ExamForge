@@ -63,6 +63,51 @@ class AttemptController extends Controller
         }
     }
 
+    public function heartbeat(string $id, Request $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        try {
+            $result = $this->attemptService->heartbeat($id, $request->user()->id, $tenantId);
+
+            return response()->json(
+                $this->successResponse($result['message'], [
+                    'attempt' => new AttemptResource($result['attempt']),
+                    'server_time' => $result['server_time'],
+                    'remaining_seconds' => $result['remaining_seconds'],
+                ])
+            );
+        } catch (\Throwable $e) {
+            return response()->json($this->errorResponse($e->getMessage()), 400);
+        }
+    }
+
+    public function resume(string $id, Request $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        try {
+            $result = $this->attemptService->resume($id, $request->user()->id, $tenantId);
+
+            return response()->json(
+                $this->successResponse($result['message'], [
+                    'attempt' => new AttemptResource($result['attempt']),
+                    'server_time' => $result['server_time'],
+                ])
+            );
+        } catch (\Throwable $e) {
+            return response()->json($this->errorResponse($e->getMessage()), 400);
+        }
+    }
+
     public function saveAnswer(string $id, Request $request): JsonResponse
     {
         $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
@@ -106,6 +151,28 @@ class AttemptController extends Controller
 
         try {
             $result = $this->attemptService->submit($id, $request->user()->id, $tenantId);
+
+            return response()->json(
+                $this->successResponse(
+                    $result['message'],
+                    new AttemptResource($result['attempt'])
+                )
+            );
+        } catch (\Throwable $e) {
+            return response()->json($this->errorResponse($e->getMessage()), 400);
+        }
+    }
+
+    public function forceSubmit(string $id, Request $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        try {
+            $result = $this->attemptService->forceSubmit($id, $tenantId, $request->user()?->id);
 
             return response()->json(
                 $this->successResponse(

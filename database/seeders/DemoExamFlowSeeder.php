@@ -28,7 +28,7 @@ class DemoExamFlowSeeder extends Seeder
             return;
         }
 
-        $creator = $this->seedUser($tenant->id, 'creator@tenant.local', 'Question Creator', 'Question Creator');
+        $creator = $this->seedUser($tenant->id, 'creator@tenant.local', 'Creator', 'Creator');
         $reviewer = $this->seedUser($tenant->id, 'reviewer@tenant.local', 'Reviewer', 'Reviewer');
         $student = $this->seedUser($tenant->id, 'student@tenant.local', 'Student Ready', 'Student');
         $submittedStudent = $this->seedUser($tenant->id, 'submitted@tenant.local', 'Student Submitted', 'Student');
@@ -45,8 +45,8 @@ class DemoExamFlowSeeder extends Seeder
         $this->command->table(
             ['Account', 'Role', 'Password', 'Use case'],
             [
-                ['admin@tenant.local', 'Tenant Admin', self::PASSWORD, 'manage users/roles/settings'],
-                ['creator@tenant.local', 'Question Creator', self::PASSWORD, 'build and assign tests'],
+                ['admin@tenant.local', 'Admin', self::PASSWORD, 'manage users/roles/settings'],
+                ['creator@tenant.local', 'Creator', self::PASSWORD, 'build and assign tests'],
                 ['reviewer@tenant.local', 'Reviewer', self::PASSWORD, 'review, finalize, report'],
                 ['student@tenant.local', 'Student', self::PASSWORD, 'start a fresh assignment'],
                 ['submitted@tenant.local', 'Student', self::PASSWORD, 'has a submitted attempt pending grading'],
@@ -185,7 +185,7 @@ class DemoExamFlowSeeder extends Seeder
                 'max_attempts' => 1,
                 'access_type' => 'account',
                 'access_token' => null,
-                'status' => 'submitted',
+                'status' => 'completed',
             ]
         );
 
@@ -242,7 +242,7 @@ class DemoExamFlowSeeder extends Seeder
                 'max_attempts' => 1,
                 'access_type' => 'account',
                 'access_token' => null,
-                'status' => 'finalized',
+                'status' => 'completed',
             ]
         );
 

@@ -6,6 +6,7 @@ use App\Events\AttemptSubmitted;
 use App\Modules\Answer\Repositories\Contracts\AnswerRepositoryInterface;
 use App\Modules\Assignment\Repositories\Contracts\AssignmentRepositoryInterface;
 use App\Modules\Attempt\Repositories\Contracts\AttemptRepositoryInterface;
+use App\Modules\Audit\Models\AuditLog;
 use App\Shared\Services\BaseService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -55,7 +56,7 @@ class AttemptService extends BaseService
                 'status' => 'in_progress',
             ]);
 
-            $this->assignmentRepository->update($assignment->id, ['status' => 'in_progress']);
+            $this->assignmentRepository->update($assignment->id, ['status' => 'started']);
 
             return $attempt;
         });
@@ -74,6 +75,43 @@ class AttemptService extends BaseService
         return [
             'attempt' => $this->attemptRepository->findById($attemptId),
             'message' => 'Attempt retrieved',
+        ];
+    }
+
+    public function heartbeat(string $attemptId, string $assigneeId, string $tenantId): array
+    {
+        $attempt = $this->resolveAttemptForAssignee($attemptId, $assigneeId, $tenantId);
+        $this->ensureAttemptCanBeEdited($attempt);
+
+        $attempt->touch();
+
+        return [
+            'attempt' => $this->attemptRepository->findById($attemptId),
+            'message' => 'Attempt heartbeat received',
+            'server_time' => now()->toIso8601String(),
+            'remaining_seconds' => $attempt->expires_at
+                ? now()->diffInSeconds($attempt->expires_at)
+                : null,
+        ];
+    }
+
+    public function resume(string $attemptId, string $assigneeId, string $tenantId): array
+    {
+        $attempt = $this->resolveAttemptForAssignee($attemptId, $assigneeId, $tenantId);
+        $this->expireAttemptIfNeeded($attempt);
+
+        if (!in_array($attempt->status, ['in_progress', 'expired'], true)) {
+            throw ValidationException::withMessages([
+                'attempt' => ['Attempt cannot be resumed.'],
+            ]);
+        }
+
+        $attempt->touch();
+
+        return [
+            'attempt' => $this->attemptRepository->findById($attemptId),
+            'message' => 'Attempt resumed successfully',
+            'server_time' => now()->toIso8601String(),
         ];
     }
 
@@ -126,7 +164,7 @@ class AttemptService extends BaseService
                 'submitted_at' => $submittedAt,
             ]);
 
-            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'submitted']);
+            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'completed']);
 
             AttemptSubmitted::dispatch($attempt->id);
 
@@ -136,6 +174,52 @@ class AttemptService extends BaseService
         return [
             'attempt' => $attempt,
             'message' => 'Attempt submitted successfully',
+        ];
+    }
+
+    public function forceSubmit(string $attemptId, string $tenantId, ?string $actorId = null): array
+    {
+        $attempt = DB::transaction(function () use ($attemptId, $tenantId, $actorId) {
+            $attempt = $this->resolveAttemptForTenant($attemptId, $tenantId);
+
+            if (in_array($attempt->status, ['submitted', 'finalized'], true)) {
+                throw ValidationException::withMessages([
+                    'attempt' => ['Attempt has already been submitted.'],
+                ]);
+            }
+
+            $submittedAt = now();
+            if ($attempt->expires_at && now()->greaterThan($attempt->expires_at)) {
+                $submittedAt = $attempt->expires_at;
+            }
+
+            $this->attemptRepository->update($attempt->id, [
+                'status' => 'submitted',
+                'submitted_at' => $submittedAt,
+            ]);
+
+            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'completed']);
+
+            AttemptSubmitted::dispatch($attempt->id);
+
+            AuditLog::create([
+                'tenant_id' => $tenantId,
+                'actor_id' => $actorId,
+                'action' => 'attempt.force_submitted',
+                'resource_type' => 'attempt',
+                'resource_id' => $attempt->id,
+                'metadata' => array_filter([
+                    'assignment_id' => $attempt->assignment_id,
+                    'ip' => request()?->ip(),
+                ], fn ($value) => $value !== null),
+            ]);
+
+            return $this->attemptRepository->findById($attempt->id);
+        });
+
+        return [
+            'attempt' => $attempt,
+            'message' => 'Attempt force submitted successfully',
         ];
     }
 
@@ -149,7 +233,7 @@ class AttemptService extends BaseService
             ]);
         }
 
-        if (!in_array($assignment->status, ['assigned', 'in_progress'], true)) {
+        if (!in_array($assignment->status, ['assigned', 'started'], true)) {
             throw ValidationException::withMessages([
                 'assignment' => ['Assignment is not available.'],
             ]);
@@ -163,6 +247,19 @@ class AttemptService extends BaseService
         $attempt = $this->attemptRepository->findById($attemptId);
 
         if (!$attempt || $attempt->assignee_id !== $assigneeId || $attempt->assignment->tenant_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'attempt' => ['Attempt not found.'],
+            ]);
+        }
+
+        return $attempt;
+    }
+
+    private function resolveAttemptForTenant(string $attemptId, string $tenantId)
+    {
+        $attempt = $this->attemptRepository->findById($attemptId);
+
+        if (!$attempt || $attempt->assignment->tenant_id !== $tenantId) {
             throw ValidationException::withMessages([
                 'attempt' => ['Attempt not found.'],
             ]);
@@ -186,6 +283,7 @@ class AttemptService extends BaseService
     {
         if ($attempt->status === 'in_progress' && $attempt->expires_at && now()->greaterThan($attempt->expires_at)) {
             $this->attemptRepository->update($attempt->id, ['status' => 'expired']);
+            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'expired']);
             $attempt->status = 'expired';
         }
     }

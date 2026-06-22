@@ -41,7 +41,11 @@ class ResolveTenantMiddleware
 
         if (!$tenant) {
             return response()->json([
-                'message' => 'Tenant not found'
+                'success' => false,
+                'message' => 'Tenant not found',
+                'error_code' => 'TENANT_NOT_FOUND',
+                'data' => null,
+                'errors' => null,
             ], 404);
         }
 

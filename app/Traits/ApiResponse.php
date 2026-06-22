@@ -13,11 +13,13 @@ trait ApiResponse
         ];
     }
 
-    protected function errorResponse(string $message = 'Error', $errors = null, int $code = 400): array
+    protected function errorResponse(string $message = 'Error', $errors = null, ?string $errorCode = null): array
     {
         return [
             'success' => false,
             'message' => $message,
+            'error_code' => $errorCode,
+            'data' => null,
             'errors' => $errors,
         ];
     }

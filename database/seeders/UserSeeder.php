@@ -21,10 +21,10 @@ class UserSeeder extends Seeder
             return;
         }
 
-        $role = Role::where('name', 'Tenant Admin')->first();
+        $role = Role::where('name', 'Admin')->first();
 
         if (!$role) {
-            $this->command->error('Role Tenant Admin not found!');
+            $this->command->error('Role Admin not found!');
             return;
         }
 
@@ -34,7 +34,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'id'            => (string) Str::uuid(),
-                'display_name'  => 'Tenant Admin',
+                'display_name'  => 'Admin',
                 'password_hash' => Hash::make('12345678'),
                 'tenant_id'     => $tenant->id,
                 'is_active'     => true,
@@ -47,6 +47,6 @@ class UserSeeder extends Seeder
             ]
         ]);
 
-        $this->command->info('Tenant admin user created');
+        $this->command->info('Admin user created');
     }
 }

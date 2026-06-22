@@ -15,7 +15,11 @@ class RolesAndPermissionsSeeder extends Seeder
         'questions'   => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
         'tests'       => ['view', 'build', 'publish'],
         'assignments' => ['manage'],
+        'attempts'    => ['force-submit'],
         'grading'     => ['review'],
+        'reports'     => ['view', 'export'],
+        'ai'          => ['generate-questions', 'suggest-feedback'],
+        'system'      => ['health'],
         'users'       => ['manage'],
         'tenant'      => ['settings', 'manage'],
         'audit'       => ['view'],
@@ -25,7 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
      * Roles: name => [[resource, action], ...]
      */
     private array $roles = [
-        'Tenant Admin' => [
+        'System Admin' => [
             ['questions',   'view'],
             ['questions',   'create'],
             ['questions',   'update'],
@@ -36,13 +40,28 @@ class RolesAndPermissionsSeeder extends Seeder
             ['tests',       'build'],
             ['tests',       'publish'],
             ['assignments', 'manage'],
+            ['attempts',    'force-submit'],
             ['grading',     'review'],
+            ['reports',     'view'],
+            ['reports',     'export'],
+            ['ai',          'generate-questions'],
+            ['ai',          'suggest-feedback'],
+            ['system',      'health'],
             ['users',       'manage'],
             ['tenant',      'settings'],
             ['tenant',      'manage'],
             ['audit',       'view'],
         ],
-        'Question Creator' => [
+        'Admin' => [
+            ['users',       'manage'],
+            ['tenant',      'settings'],
+            ['tenant',      'manage'],
+            ['audit',       'view'],
+            ['reports',     'view'],
+            ['reports',     'export'],
+            ['attempts',    'force-submit'],
+        ],
+        'Creator' => [
             ['questions', 'view'],
             ['questions', 'create'],
             ['questions', 'update'],
@@ -53,14 +72,16 @@ class RolesAndPermissionsSeeder extends Seeder
             ['tests',     'build'],
             ['tests',     'publish'],
             ['assignments', 'manage'],
+            ['ai', 'generate-questions'],
         ],
         'Reviewer' => [
             ['grading', 'review'],
-        ],
-        'Assignee' => [
-            ['assignments', 'manage'],
+            ['reports', 'view'],
+            ['attempts', 'force-submit'],
+            ['ai', 'suggest-feedback'],
         ],
         'Student' => [],
+        'Guest' => [],
     ];
 
     public function run(): void
@@ -105,11 +126,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $this->command->table(
             ['Role', 'Permissions'],
             [
-                ['Tenant Admin',     'All tenant permissions'],
-                ['Question Creator', 'questions.*, tests.view/build/publish, assignments.manage'],
-                ['Reviewer',         'grading.review'],
-                ['Assignee',         'assignments.manage'],
+                ['System Admin',     'All permissions'],
+                ['Admin',            'users.manage, tenant.*, audit.view, reports.view/export'],
+                ['Creator',          'questions.*, tests.view/build/publish, assignments.manage, ai.generate-questions'],
+                ['Reviewer',         'grading.review, reports.view, attempts.force-submit, ai.suggest-feedback'],
                 ['Student',          '— (none)'],
+                ['Guest',            '— (token-linked exam access only)'],
             ]
         );
     }
@@ -117,11 +139,12 @@ class RolesAndPermissionsSeeder extends Seeder
     private function description(string $role): string
     {
         return match ($role) {
-            'Tenant Admin'     => 'Full access to all resources within the tenant.',
-            'Question Creator' => 'Can view, create, update, delete, publish and archive questions, plus build/publish tests.',
+            'System Admin'     => 'Platform operator with full access across tenants and system health.',
+            'Admin'            => 'Tenant administrator who manages users, roles, audit logs, and reports.',
+            'Creator'          => 'Can manage question bank, build tests, publish tests, and assign exams.',
             'Reviewer'         => 'Can review and grade student submissions.',
-            'Assignee'         => 'Can manage and assign tests to students.',
             'Student'          => 'Access to assigned tests and own submissions only.',
+            'Guest'            => 'Access to token-linked tests and own submissions only.',
             default            => '',
         };
     }

@@ -120,7 +120,7 @@ class GradingService extends BaseService
                 'status' => 'finalized',
             ]);
 
-            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'finalized']);
+            $this->assignmentRepository->update($attempt->assignment_id, ['status' => 'completed']);
 
             $this->auditRepository->record([
                 'tenant_id' => $tenantId,

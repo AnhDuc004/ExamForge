@@ -18,6 +18,15 @@ class AssignmentRepository extends BaseRepository implements AssignmentRepositor
         return $this->model->with(['test', 'assignee', 'assignedBy', 'tenant'])->where('id', $id)->first();
     }
 
+    public function findByIdForTenant(string $id, string $tenantId)
+    {
+        return $this->model
+            ->with(['test', 'assignee', 'assignedBy', 'tenant'])
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+    }
+
     public function create(array $attributes)
     {
         return $this->model->create($attributes);
@@ -87,6 +96,18 @@ class AssignmentRepository extends BaseRepository implements AssignmentRepositor
     {
         return $this->model
             ->where('access_token', $accessToken)
+            ->where('status', '!=', 'expired')
+            ->where('status', '!=', 'archived')
+            ->where('access_type', 'token')
+            ->first();
+    }
+
+    public function findByAccessTokenForTenant(string $accessToken, string $tenantId)
+    {
+        return $this->model
+            ->with(['test', 'assignee', 'assignedBy', 'tenant'])
+            ->where('access_token', $accessToken)
+            ->where('tenant_id', $tenantId)
             ->where('status', '!=', 'expired')
             ->where('status', '!=', 'archived')
             ->where('access_type', 'token')

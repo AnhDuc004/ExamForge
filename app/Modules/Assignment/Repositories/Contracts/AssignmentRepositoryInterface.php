@@ -6,6 +6,8 @@ interface AssignmentRepositoryInterface
 {
     public function findById(string $id);
 
+    public function findByIdForTenant(string $id, string $tenantId);
+
     public function create(array $attributes);
 
     public function update(string $id, array $attributes);
@@ -23,6 +25,8 @@ interface AssignmentRepositoryInterface
     public function listByAssignedByAndTenant(string $assignedById, string $tenantId, int $page = 1, int $perPage = 15);
 
     public function findByAccessToken(string $accessToken);
+
+    public function findByAccessTokenForTenant(string $accessToken, string $tenantId);
 
     public function findByAssigneeAndTest(string $assigneeId, string $testId);
 }

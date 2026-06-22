@@ -1012,6 +1012,8 @@ paths:
           $ref: '#/components/responses/BadRequestApiError'
         '401':
           $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
         '404':
           $ref: '#/components/responses/NotFoundError'
     post:
@@ -1434,7 +1436,7 @@ paths:
     get:
       tags: [Assignments]
       summary: My assignments
-      description: List assignments for the authenticated student.
+      description: List assignments for the authenticated student or guest. Student / Guest only.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
         - $ref: '#/components/parameters/Page'
@@ -1455,6 +1457,8 @@ paths:
           $ref: '#/components/responses/BadRequestApiError'
         '401':
           $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
 
   /assignments/{assignmentId}/start:
     post:
@@ -1480,6 +1484,8 @@ paths:
           $ref: '#/components/responses/BadRequestApiError'
         '401':
           $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
 
   /assignments/{id}:
     parameters:
@@ -1572,19 +1578,19 @@ paths:
         '404':
           $ref: '#/components/responses/TenantNotFoundMessage'
 
-  /assignments/verify-token:
-    post:
+  /assignments/verify:
+    get:
       tags: [Assignments]
       summary: Xác minh access token
-      description: Kiểm tra token truy cập của assignment trước khi bắt đầu làm bài.
+      description: Kiểm tra token truy cập của assignment trước khi bắt đầu làm bài. Endpoint mở cho Student và Guest.
+      security: []
       parameters:
         - $ref: '#/components/parameters/XTenantID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyAssignmentTokenRequest'
+        - name: access_token
+          in: query
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Xác minh token thành công
@@ -1599,8 +1605,6 @@ paths:
                         $ref: '#/components/schemas/AssignmentResource'
         '400':
           $ref: '#/components/responses/BadRequestApiError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedMessage'
         '404':
           $ref: '#/components/responses/TenantNotFoundMessage'
         '422':
@@ -1613,7 +1617,7 @@ paths:
     get:
       tags: [Attempts]
       summary: Attempt detail
-      description: Return attempt state, safe test content, and saved answers.
+      description: Return attempt state, safe test content, and saved answers. Student / Guest only.
       responses:
         '200':
           description: Attempt detail
@@ -1631,11 +1635,76 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedMessage'
 
-  /attempts/{id}/answers:
+  /attempts/{id}/heartbeat:
     post:
       tags: [Attempts]
+      summary: Heartbeat
+      description: Sync attempt activity with the server. Student / Guest only.
+      parameters:
+        - $ref: '#/components/parameters/AttemptIdPath'
+        - $ref: '#/components/parameters/XTenantID'
+      responses:
+        '200':
+          description: Heartbeat received
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          attempt:
+                            $ref: '#/components/schemas/AttemptResource'
+                          server_time:
+                            type: string
+                            format: date-time
+                          remaining_seconds:
+                            type: integer
+                            nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+
+  /attempts/{id}/resume:
+    post:
+      tags: [Attempts]
+      summary: Resume attempt
+      description: Restore attempt state after reconnect or refresh. Student / Guest only.
+      parameters:
+        - $ref: '#/components/parameters/AttemptIdPath'
+        - $ref: '#/components/parameters/XTenantID'
+      responses:
+        '200':
+          description: Attempt resumed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          attempt:
+                            $ref: '#/components/schemas/AttemptResource'
+                          server_time:
+                            type: string
+                            format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+
+  /attempts/{id}/answers:
+    patch:
+      tags: [Attempts]
       summary: Save answer
-      description: Auto-save or update an answer for an in-progress attempt.
+      description: Auto-save or update an answer for an in-progress attempt. Student / Guest only.
       parameters:
         - $ref: '#/components/parameters/AttemptIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1663,12 +1732,47 @@ paths:
           $ref: '#/components/responses/UnauthorizedMessage'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+    post:
+      tags: [Attempts]
+      summary: Save answer
+      description: Compatibility alias for auto-save.
+      parameters:
+        - $ref: '#/components/parameters/AttemptIdPath'
+        - $ref: '#/components/parameters/XTenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttemptAnswerSaveRequest'
+      responses:
+        '200':
+          description: Answer saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnswerResource'
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
 
   /attempts/{id}/submit:
     post:
       tags: [Attempts]
       summary: Submit attempt
-      description: Lock the attempt and mark the assignment as submitted.
+      description: Lock the attempt and mark the assignment as submitted. Student / Guest only.
       parameters:
         - $ref: '#/components/parameters/AttemptIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1688,12 +1792,41 @@ paths:
           $ref: '#/components/responses/BadRequestApiError'
         '401':
           $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+
+  /attempts/{id}/force-submit:
+    post:
+      tags: [Attempts]
+      summary: Force submit attempt
+      description: Force submit an attempt for policy or moderation purposes. Admin or Reviewer only.
+      parameters:
+        - $ref: '#/components/parameters/AttemptIdPath'
+        - $ref: '#/components/parameters/XTenantID'
+      responses:
+        '200':
+          description: Attempt force submitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AttemptResource'
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
 
   /grading/pending:
     get:
       tags: [Grading]
       summary: Pending grading attempts
-      description: List submitted attempts that have not been finalized.
+      description: List submitted attempts that have not been finalized. Reviewer only.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
         - $ref: '#/components/parameters/Page'
@@ -1721,7 +1854,7 @@ paths:
     put:
       tags: [Grading]
       summary: Review answer
-      description: Set manual score and reviewer feedback for an answer.
+      description: Set manual score and reviewer feedback for an answer. Reviewer only.
       parameters:
         - $ref: '#/components/parameters/AnswerIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1756,7 +1889,7 @@ paths:
     post:
       tags: [Grading]
       summary: Finalize attempt
-      description: Auto-score objective answers, require reviewed subjective answers, and lock final score.
+      description: Auto-score objective answers, require reviewed subjective answers, and lock final score. Reviewer only.
       parameters:
         - $ref: '#/components/parameters/AttemptIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1783,7 +1916,7 @@ paths:
     get:
       tags: [Reports]
       summary: Test report
-      description: Return aggregate score summary and finalized attempts for a test.
+      description: Return aggregate score summary and finalized attempts for a test. Admin or Reviewer only.
       parameters:
         - $ref: '#/components/parameters/TestIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1812,7 +1945,7 @@ paths:
     post:
       tags: [Reports]
       summary: Export test report
-      description: Generate a CSV report export and return a completed job id.
+      description: Generate a CSV report export and return a completed job id. Admin only.
       parameters:
         - $ref: '#/components/parameters/TestIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -1839,7 +1972,7 @@ paths:
     get:
       tags: [Reports]
       summary: Download export
-      description: Download a completed report export CSV.
+      description: Download a completed report export CSV. Admin only.
       parameters:
         - $ref: '#/components/parameters/JobIdPath'
         - $ref: '#/components/parameters/XTenantID'
@@ -2259,6 +2392,146 @@ paths:
         '404':
           $ref: '#/components/responses/TenantNotFoundMessage'
 
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: Audit logs
+      description: Return audit trail records with tenant isolation. Admin only.
+      parameters:
+        - $ref: '#/components/parameters/XTenantID'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Audit logs retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              type: object
+                          pagination:
+                            type: object
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+
+  /ai/generate-questions:
+    post:
+      tags: [AI]
+      summary: Generate question draft
+      description: Queue a question generation job from a prompt. Creator only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+                quantity:
+                  type: integer
+                  nullable: true
+                difficulty:
+                  type: string
+                  nullable: true
+      responses:
+        '202':
+          description: Generation queued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /ai/suggest-feedback:
+    post:
+      tags: [AI]
+      summary: Suggest feedback
+      description: Generate a feedback draft for an essay answer. Reviewer only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answer_text]
+              properties:
+                answer_text:
+                  type: string
+                rubric:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Feedback suggestion generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Check database, Redis, and disk readiness. System Admin only.
+      parameters:
+        - $ref: '#/components/parameters/XTenantID'
+      responses:
+        '200':
+          description: Health check completed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2459,25 +2732,37 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/MessageOnlyResponse'
+            $ref: '#/components/schemas/ErrorEnvelope'
           example:
+            success: false
             message: Unauthenticated
+            error_code: UNAUTHENTICATED
+            data: null
+            errors: null
     ForbiddenMessage:
       description: Không có quyền truy cập
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/MessageOnlyResponse'
+            $ref: '#/components/schemas/ErrorEnvelope'
           example:
+            success: false
             message: Forbidden
+            error_code: FORBIDDEN
+            data: null
+            errors: null
     TenantNotFoundMessage:
       description: Không tìm thấy tenant
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/MessageOnlyResponse'
+            $ref: '#/components/schemas/ErrorEnvelope'
           example:
+            success: false
             message: Tenant not found
+            error_code: TENANT_NOT_FOUND
+            data: null
+            errors: null
     NotFoundError:
       description: Không tìm thấy dữ liệu
       content:
@@ -2497,6 +2782,8 @@ components:
           example:
             success: false
             message: Tenant not resolved
+            error_code: null
+            data: null
             errors: null
     ValidationError:
       description: Dữ liệu gửi lên không hợp lệ
@@ -2505,7 +2792,9 @@ components:
           schema:
             $ref: '#/components/schemas/ValidationErrorResponse'
           example:
+            success: false
             message: The given data was invalid.
+            data: null
             errors:
               email:
                 - Email is already registered.
@@ -2530,6 +2819,7 @@ components:
       required:
         - success
         - message
+        - data
       properties:
         success:
           type: boolean
@@ -2537,6 +2827,9 @@ components:
         message:
           type: string
           example: Có lỗi xảy ra
+        error_code:
+          type: string
+          nullable: true
         errors:
           nullable: true
           oneOf:
@@ -2544,6 +2837,8 @@ components:
               additionalProperties: true
             - type: array
               items: {}
+        data:
+          nullable: true
     MessageOnlyResponse:
       type: object
       required:
@@ -2555,12 +2850,19 @@ components:
     ValidationErrorResponse:
       type: object
       required:
+        - success
         - message
+        - data
         - errors
       properties:
+        success:
+          type: boolean
+          example: false
         message:
           type: string
           example: The given data was invalid.
+        data:
+          nullable: true
         errors:
           type: object
           additionalProperties:

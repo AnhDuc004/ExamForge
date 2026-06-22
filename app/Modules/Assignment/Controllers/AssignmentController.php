@@ -62,10 +62,15 @@ class AssignmentController extends Controller
         }
     }
 
-    public function show(string $id): JsonResponse
+    public function show(string $id, Request $request): JsonResponse
     {
         try {
-            $result = $this->assignmentService->getById($id);
+            $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+            if (!$tenantId) {
+                return response()->json($this->errorResponse('Tenant not resolved'), 400);
+            }
+
+            $result = $this->assignmentService->getById($id, $tenantId);
 
             return response()->json(
                 $this->successResponse(
@@ -169,6 +174,11 @@ class AssignmentController extends Controller
     public function update(string $id, UpdateAssignmentRequest $request): JsonResponse
     {
         try {
+            $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+            if (!$tenantId) {
+                return response()->json($this->errorResponse('Tenant not resolved'), 400);
+            }
+
             $dto = new UpdateAssignmentDTO([
                 'due_at' => $request->due_at,
                 'max_attempts' => $request->max_attempts,
@@ -176,7 +186,7 @@ class AssignmentController extends Controller
                 'access_type' => $request->access_type,
             ]);
 
-            $result = $this->assignmentService->update($id, $dto);
+            $result = $this->assignmentService->update($id, $dto, $tenantId);
 
             return response()->json(
                 $this->successResponse(
@@ -195,10 +205,15 @@ class AssignmentController extends Controller
         }
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(string $id, Request $request): JsonResponse
     {
         try {
-            $this->assignmentService->delete($id);
+            $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+            if (!$tenantId) {
+                return response()->json($this->errorResponse('Tenant not resolved'), 400);
+            }
+
+            $this->assignmentService->delete($id, $tenantId);
 
             return response()->json($this->successResponse('Assignment deleted successfully'));
         } catch (\Throwable $e) {
@@ -209,14 +224,19 @@ class AssignmentController extends Controller
         }
     }
 
-    public function verifyAccessToken(Request $request): JsonResponse
+    public function verify(Request $request): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'access_token' => ['required', 'string'],
         ]);
 
         try {
-            $result = $this->assignmentService->verifyAccessToken(hash('sha256', $request->access_token));
+            $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+            if (!$tenantId) {
+                return response()->json($this->errorResponse('Tenant not resolved'), 400);
+            }
+
+            $result = $this->assignmentService->verifyAccessToken(hash('sha256', $validated['access_token']), $tenantId);
 
             return response()->json(
                 $this->successResponse(
@@ -230,5 +250,10 @@ class AssignmentController extends Controller
                 400
             );
         }
+    }
+
+    public function verifyAccessToken(Request $request): JsonResponse
+    {
+        return $this->verify($request);
     }
 }
