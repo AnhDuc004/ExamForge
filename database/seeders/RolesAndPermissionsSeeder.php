@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Modules\Role\Models\Role;
 use App\Modules\Permission\Models\Permission;
+use App\Modules\Role\Models\Role;
+use Illuminate\Database\Seeder;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -12,15 +12,18 @@ class RolesAndPermissionsSeeder extends Seeder
      * Permissions: [resource => [action, ...]]
      */
     private array $permissions = [
-        'questions'   => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
-        'tests'       => ['view', 'build', 'publish'],
-        'assignments' => ['manage', 'view'],
-        'attempts'    => ['force-submit'],
-        'grading'     => ['review'],
+        'users'       => ['view', 'create', 'update-status'],
+        'roles'       => ['view'],
+        'media'       => ['presigned-upload', 'create'],
+        'questions'   => ['view', 'create', 'bulk-import', 'bulk-update'],
+        'tests'       => ['view', 'create', 'update-sections', 'publish'],
+        'assignments' => ['create', 'view', 'verify'],
+        'attempts'    => ['start', 'view', 'heartbeat', 'save-answers', 'resume', 'submit', 'force-submit'],
+        'grading'     => ['view-pending', 'review-answer', 'finalize'],
         'reports'     => ['view', 'export'],
+        'jobs'        => ['download'],
         'ai'          => ['generate-questions', 'suggest-feedback'],
         'system'      => ['health'],
-        'users'       => ['manage'],
         'tenant'      => ['settings', 'manage'],
         'audit'       => ['view'],
     ];
@@ -30,95 +33,84 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private array $roles = [
         'System Admin' => [
-            ['questions',   'view'],
-            ['questions',   'create'],
-            ['questions',   'update'],
-            ['questions',   'delete'],
-            ['questions',   'publish'],
-            ['questions',   'archive'],
-            ['tests',       'view'],
-            ['tests',       'build'],
-            ['tests',       'publish'],
-            ['assignments', 'manage'],
-            ['attempts',    'force-submit'],
-            ['grading',     'review'],
-            ['reports',     'view'],
-            ['reports',     'export'],
-            ['ai',          'generate-questions'],
-            ['ai',          'suggest-feedback'],
-            ['system',      'health'],
-            ['users',       'manage'],
-            ['tenant',      'settings'],
-            ['tenant',      'manage'],
-            ['audit',       'view'],
+            ['system', 'health'],
+            ['tenant', 'settings'],
+            ['tenant', 'manage'],
         ],
         'Admin' => [
-            ['users',       'manage'],
-            ['tenant',      'settings'],
-            ['tenant',      'manage'],
-            ['audit',       'view'],
-            ['reports',     'view'],
-            ['reports',     'export'],
-            ['attempts',    'force-submit'],
+            ['users',    'view'],
+            ['users',    'create'],
+            ['users',    'update-status'],
+            ['roles',    'view'],
+            ['tenant',   'settings'],
+            ['tenant',   'manage'],
+            ['audit',    'view'],
+            ['reports',  'view'],
+            ['reports',  'export'],
+            ['jobs',     'download'],
+            ['attempts', 'force-submit'],
         ],
         'Creator' => [
-            ['questions', 'view'],
-            ['questions', 'create'],
-            ['questions', 'update'],
-            ['questions', 'delete'],
-            ['questions', 'publish'],
-            ['questions', 'archive'],
-            ['tests',     'view'],
-            ['tests',     'build'],
-            ['tests',     'publish'],
-            ['assignments', 'manage'],
-            ['ai', 'generate-questions'],
+            ['media',       'presigned-upload'],
+            ['media',       'create'],
+            ['questions',   'view'],
+            ['questions',   'create'],
+            ['questions',   'bulk-import'],
+            ['questions',   'bulk-update'],
+            ['tests',       'view'],
+            ['tests',       'create'],
+            ['tests',       'update-sections'],
+            ['tests',       'publish'],
+            ['assignments', 'create'],
+            ['ai',          'generate-questions'],
         ],
         'Reviewer' => [
-            ['grading', 'review'],
-            ['reports', 'view'],
+            ['grading',  'view-pending'],
+            ['grading',  'review-answer'],
+            ['grading',  'finalize'],
+            ['reports',  'view'],
             ['attempts', 'force-submit'],
-            ['ai', 'suggest-feedback'],
+            ['ai',       'suggest-feedback'],
         ],
         'Student' => [
             ['assignments', 'view'],
+            ['assignments', 'verify'],
+            ['attempts',    'start'],
+            ['attempts',    'view'],
+            ['attempts',    'heartbeat'],
+            ['attempts',    'save-answers'],
+            ['attempts',    'resume'],
+            ['attempts',    'submit'],
         ],
-        'Guest' => [],
+        'Guest' => [
+            ['assignments', 'verify'],
+        ],
     ];
 
     public function run(): void
     {
-        // ─────────────────────────────────────────────
-        // 1. Seed permissions
-        // ─────────────────────────────────────────────
         foreach ($this->permissions as $resource => $actions) {
             foreach ($actions as $action) {
                 Permission::firstOrCreate([
                     'resource' => $resource,
-                    'action'   => $action,
+                    'action' => $action,
                 ]);
             }
         }
 
-        // ─────────────────────────────────────────────
-        // 2. Seed roles & attach permissions
-        // ─────────────────────────────────────────────
         foreach ($this->roles as $roleName => $permissionPairs) {
-            $role = Role::firstOrCreate([
-                'name'      => $roleName,
-            ], [
-                'description' => $this->description($roleName),
-            ]);
-
-            if (empty($permissionPairs)) {
-                continue;
-            }
+            $role = Role::firstOrCreate(
+                ['name' => $roleName],
+                ['description' => $this->description($roleName)]
+            );
 
             $permissionIds = collect($permissionPairs)
-                ->map(fn ($pair) => Permission::where('resource', $pair[0])
+                ->map(fn (array $pair) => Permission::query()
+                    ->where('resource', $pair[0])
                     ->where('action', $pair[1])
                     ->value('id'))
                 ->filter()
+                ->values()
                 ->all();
 
             $role->permissions()->sync($permissionIds);
@@ -128,12 +120,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $this->command->table(
             ['Role', 'Permissions'],
             [
-                ['System Admin',     'All permissions'],
-                ['Admin',            'users.manage, tenant.*, audit.view, reports.view/export'],
-                ['Creator',          'questions.*, tests.view/build/publish, assignments.manage, ai.generate-questions'],
-                ['Reviewer',         'grading.review, reports.view, attempts.force-submit, ai.suggest-feedback'],
-                ['Student',          'assignments.view'],
-                ['Guest',            '— (token-linked exam access only)'],
+                ['System Admin', 'system.health, tenant.settings/manage'],
+                ['Admin', 'users.view/create/update-status, roles.view, tenant.*, audit.view, reports.view/export, jobs.download, attempts.force-submit'],
+                ['Creator', 'media.presigned-upload/create, questions.view/create/bulk-import/bulk-update, tests.view/create/update-sections/publish, assignments.create, ai.generate-questions'],
+                ['Reviewer', 'grading.view-pending/review-answer/finalize, reports.view, attempts.force-submit, ai.suggest-feedback'],
+                ['Student', 'assignments.view/verify, attempts.start/view/heartbeat/save-answers/resume/submit'],
+                ['Guest', 'assignments.verify'],
             ]
         );
     }
@@ -141,13 +133,13 @@ class RolesAndPermissionsSeeder extends Seeder
     private function description(string $role): string
     {
         return match ($role) {
-            'System Admin'     => 'Platform operator with full access across tenants and system health.',
-            'Admin'            => 'Tenant administrator who manages users, roles, audit logs, and reports.',
-            'Creator'          => 'Can manage question bank, build tests, publish tests, and assign exams.',
-            'Reviewer'         => 'Can review and grade student submissions.',
-            'Student'          => 'Access to assigned tests and own submissions only.',
-            'Guest'            => 'Access to token-linked tests and own submissions only.',
-            default            => '',
+            'System Admin' => 'Platform operator focused on system health and tenant lifecycle only.',
+            'Admin' => 'Tenant administrator who manages users, roles, audit logs, reports, and exam enforcement.',
+            'Creator' => 'Can upload media, manage question bank, build tests, publish tests, and assign exams.',
+            'Reviewer' => 'Can review pending submissions, score answers, and finalize grading.',
+            'Student' => 'Can verify assignments and complete exam attempts assigned to them.',
+            'Guest' => 'Can verify token-linked exam access without a fixed account.',
+            default => '',
         };
     }
 }

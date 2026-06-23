@@ -8,6 +8,15 @@ Route::prefix('v1')->group(function () {
     require __DIR__ . '/modules/auth.php';
     require __DIR__ . '/modules/assignment_public.php';
 
+    // PROTECTED (global, no tenant resolution)
+    Route::middleware([
+        'api',
+        'auth:sanctum',
+        \App\Middleware\EnsureActiveUserMiddleware::class,
+    ])->group(function () {
+        require __DIR__ . '/modules/tenant.php';
+    });
+
     // PROTECTED (tenant-based)
     Route::middleware([
         'api',
@@ -16,7 +25,6 @@ Route::prefix('v1')->group(function () {
         \App\Middleware\EnsureActiveUserMiddleware::class,
     ])->group(function () {
 
-        require __DIR__ . '/modules/tenant.php';
         require __DIR__ . '/modules/user.php';
         require __DIR__ . '/modules/role.php';
         require __DIR__ . '/modules/permission.php';

@@ -256,7 +256,8 @@ class QuestionController extends Controller
 
     public function publish(string $id): JsonResponse
     {
-        $tenantId = $this->resolveTenantId(request());
+        $request = request();
+        $tenantId = $this->resolveTenantId($request);
 
         if (!$tenantId) {
             return response()->json(
@@ -288,7 +289,8 @@ class QuestionController extends Controller
 
     public function archive(string $id): JsonResponse
     {
-        $tenantId = $this->resolveTenantId(request());
+        $request = request();
+        $tenantId = $this->resolveTenantId($request);
 
         if (!$tenantId) {
             return response()->json(

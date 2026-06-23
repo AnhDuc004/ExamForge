@@ -22,10 +22,10 @@ Route::prefix('questions')->middleware('auth:sanctum')->group(function () {
 
     // Bulk import / update
     Route::post('/bulk-import', [QuestionController::class, 'bulkImport'])
-        ->middleware('permission:questions,create')
+        ->middleware('permission:questions,bulk-import')
         ->name('questions.bulk-import');
     Route::put('/bulk-update', [QuestionController::class, 'bulkUpdate'])
-        ->middleware('permission:questions,update')
+        ->middleware('permission:questions,bulk-update')
         ->name('questions.bulk-update');
 
     // Get specific question
@@ -35,21 +35,21 @@ Route::prefix('questions')->middleware('auth:sanctum')->group(function () {
 
     // Update question
     Route::put('/{id}', [QuestionController::class, 'update'])
-        ->middleware('permission:questions,update')
+        ->middleware('permission:questions,bulk-update')
         ->name('questions.update');
 
     // Delete question
     Route::delete('/{id}', [QuestionController::class, 'destroy'])
-        ->middleware('permission:questions,delete')
+        ->middleware('permission:questions,bulk-update')
         ->name('questions.destroy');
 
     // Publish question
     Route::post('/{id}/publish', [QuestionController::class, 'publish'])
-        ->middleware('permission:questions,publish')
+        ->middleware('permission:questions,bulk-update')
         ->name('questions.publish');
 
     // Archive question
     Route::post('/{id}/archive', [QuestionController::class, 'archive'])
-        ->middleware('permission:questions,archive')
+        ->middleware('permission:questions,bulk-update')
         ->name('questions.archive');
 });

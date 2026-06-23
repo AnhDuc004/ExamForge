@@ -13,7 +13,7 @@ Route::prefix('auth')->group(function () {
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('student-invitations', [AuthController::class, 'createStudentInvitation'])
-            ->middleware('permission:users,manage')
+            ->middleware('permission:users,create')
             ->name('auth.student-invitations.store');
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');

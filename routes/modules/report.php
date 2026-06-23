@@ -9,5 +9,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('reports/tests/{id}/export', [ReportController::class, 'exportTestReport'])
         ->middleware('permission:reports,export');
     Route::get('jobs/{jobId}/download', [ReportController::class, 'downloadJob'])
-        ->middleware('permission:reports,export');
+        ->middleware('permission:jobs,download');
 });
