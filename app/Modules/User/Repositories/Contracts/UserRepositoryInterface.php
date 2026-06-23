@@ -14,6 +14,8 @@ interface UserRepositoryInterface
 
     public function listByTenant(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null);
 
+    public function listSelectableStudents(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null);
+
     public function list(int $page = 1, int $perPage = 15, ?string $search = null);
 
     public function create(array $attributes);

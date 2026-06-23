@@ -3,6 +3,7 @@
 namespace App\Modules\Test\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Test\DTOs\AttachTestSectionQuestionDTO;
 use App\Modules\Test\DTOs\CreateTestDTO;
 use App\Modules\Test\DTOs\CreateTestSectionDTO;
@@ -150,6 +151,17 @@ class TestController extends Controller
         }
 
         $result = $this->testService->publish($id, $tenantId);
+
+        AuditLog::create([
+            'tenant_id' => $tenantId,
+            'actor_id' => request()->user()?->id,
+            'action' => 'test.published',
+            'resource_type' => 'test',
+            'resource_id' => $id,
+            'metadata' => array_filter([
+                'ip' => request()->ip(),
+            ], fn ($value) => $value !== null),
+        ]);
 
         return response()->json(
             $this->successResponse($result['message'], new TestResource($result['test']))

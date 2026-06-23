@@ -203,6 +203,11 @@ class AssignmentService
         ];
     }
 
+    public function listSelectableStudents(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null)
+    {
+        return $this->userRepository->listSelectableStudents($tenantId, $page, $perPage, $search);
+    }
+
     public function listByAssignee(string $assigneeId, int $page = 1, int $perPage = 15): array
     {
         $assignments = $this->assignmentRepository->listByAssignee($assigneeId, $page, $perPage);

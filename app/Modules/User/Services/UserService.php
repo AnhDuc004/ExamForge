@@ -24,6 +24,11 @@ class UserService extends BaseService
         return $this->userRepository->listByTenant($tenantId, $page, $perPage, $search);
     }
 
+    public function listSelectableStudents(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null)
+    {
+        return $this->userRepository->listSelectableStudents($tenantId, $page, $perPage, $search);
+    }
+
     public function find(string $id, string $tenantId): ?User
     {
         return $this->userRepository->findByIdForTenant($id, $tenantId);

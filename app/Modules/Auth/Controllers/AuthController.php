@@ -10,6 +10,7 @@ use App\Modules\Auth\Requests\CreateStudentInvitationRequest;
 use App\Modules\Auth\Requests\LoginRequest;
 use App\Modules\Auth\Requests\RegisterRequest;
 use App\Modules\Auth\Resources\UserResource;
+use App\Modules\Tenant\Models\Tenant;
 use App\Modules\Tenant\Resources\TenantResource;
 use App\Modules\Auth\Services\AuthService;
 use App\Traits\ApiResponse;
@@ -161,6 +162,10 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->loadMissing('roles.permissions');
+        $tenant = app()->bound('currentTenant')
+            ? app('currentTenant')
+            : ($user->tenant_id ? Tenant::find($user->tenant_id) : null);
+
         $permissions = $user->roles
             ->flatMap(fn ($role) => $role->permissions)
             ->unique(fn ($permission) => $permission->resource . ':' . $permission->action)
@@ -169,13 +174,23 @@ class AuthController extends Controller
                 'resource' => $permission->resource,
                 'action' => $permission->action,
             ]);
+        $roles = $user->roles
+            ->values()
+            ->map(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'description' => $role->description,
+                'tenant_id' => $role->tenant_id,
+            ]);
 
         return response()->json(
             $this->successResponse(
                 'User profile',
                 [
                     'user' => new UserResource($user),
-                    'tenant' => app()->bound('currentTenant') ? new TenantResource(app('currentTenant')) : null,
+                    'roles' => $roles,
+                    'tenant_id' => $tenant?->id ?? $user->tenant_id,
+                    'tenant' => $tenant ? new TenantResource($tenant) : null,
                     'permissions' => $permissions,
                 ]
             )

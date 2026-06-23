@@ -52,6 +52,24 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
+    public function listSelectableStudents(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null)
+    {
+        return $this->model->with('roles')
+            ->where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->whereHas('roles', function ($query) {
+                $query->where('name', 'Student');
+            })
+            ->when($search, function ($query, $search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('email', 'like', '%' . $search . '%')
+                        ->orWhere('display_name', 'like', '%' . $search . '%');
+                });
+            })
+            ->orderBy('display_name')
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
+
     public function list(int $page = 1, int $perPage = 15, ?string $search = null)
     {
         return $this->model->with('roles')

@@ -3,6 +3,7 @@
 namespace App\Modules\Question\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Audit\Models\AuditLog;
 use App\Modules\Question\DTOs\CreateQuestionDTO;
 use App\Modules\Question\DTOs\UpdateQuestionDTO;
 use App\Modules\Question\Requests\BulkImportQuestionsRequest;
@@ -266,6 +267,17 @@ class QuestionController extends Controller
 
         $result = $this->questionService->publish($id, $tenantId);
 
+        AuditLog::create([
+            'tenant_id' => $tenantId,
+            'actor_id' => $request->user()?->id,
+            'action' => 'question.published',
+            'resource_type' => 'question',
+            'resource_id' => $id,
+            'metadata' => array_filter([
+                'ip' => $request->ip(),
+            ], fn ($value) => $value !== null),
+        ]);
+
         return response()->json(
             $this->successResponse(
                 $result['message'],
@@ -286,6 +298,17 @@ class QuestionController extends Controller
         }
 
         $result = $this->questionService->archive($id, $tenantId);
+
+        AuditLog::create([
+            'tenant_id' => $tenantId,
+            'actor_id' => $request->user()?->id,
+            'action' => 'question.archived',
+            'resource_type' => 'question',
+            'resource_id' => $id,
+            'metadata' => array_filter([
+                'ip' => $request->ip(),
+            ], fn ($value) => $value !== null),
+        ]);
 
         return response()->json(
             $this->successResponse(

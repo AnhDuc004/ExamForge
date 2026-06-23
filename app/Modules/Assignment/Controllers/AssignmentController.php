@@ -133,6 +133,36 @@ class AssignmentController extends Controller
         }
     }
 
+    public function selectableStudents(Request $request): JsonResponse
+    {
+        $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;
+
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $page = (int) $request->query('page', 1);
+        $perPage = (int) $request->query('per_page', 15);
+        $search = $request->query('search');
+
+        $students = $this->assignmentService->listSelectableStudents($tenantId, $page, $perPage, $search);
+
+        return response()->json(
+            $this->successResponse('Selectable students retrieved', [
+                'data' => \App\Modules\User\Resources\UserResource::collection($students->items()),
+                'pagination' => [
+                    'total' => $students->total(),
+                    'count' => $students->count(),
+                    'per_page' => $students->perPage(),
+                    'current_page' => $students->currentPage(),
+                    'last_page' => $students->lastPage(),
+                    'from' => $students->firstItem(),
+                    'to' => $students->lastItem(),
+                ],
+            ])
+        );
+    }
+
     public function my(Request $request): JsonResponse
     {
         $tenantId = $request->header('X-Tenant-ID') ?? app('currentTenant')?->id;

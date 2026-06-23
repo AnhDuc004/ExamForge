@@ -37,6 +37,8 @@ tags:
     description: Test result reporting
   - name: Tests
     description: Quản lý đề thi
+  - name: Audit
+    description: Tra cứu lịch sử thao tác quan trọng trong tenant
 
 security:
   - BearerAuth: []
@@ -341,6 +343,12 @@ paths:
                     tenant_id: null
                     is_active: true
                     created_at: '2026-06-16T09:00:00.000000Z'
+                  roles:
+                    - id: 1
+                      name: Admin
+                      description: Tenant administrator who manages users, roles, audit logs, and reports.
+                      tenant_id: null
+                  tenant_id: 1f2c3d4e-1111-2222-3333-444455556666
                   tenant:
                     id: 1f2c3d4e-1111-2222-3333-444455556666
                     name: Tenant Demo
@@ -1378,6 +1386,63 @@ paths:
           $ref: '#/components/responses/UnauthorizedMessage'
         '404':
           $ref: '#/components/responses/TenantNotFoundMessage'
+
+  /assignments/selectable-students:
+    get:
+      tags: [Assignments]
+      summary: Danh sách học sinh có thể assign
+      description: Trả về danh sách user có role `Student` trong tenant hiện tại, chỉ bao gồm tài khoản đang active. Dùng cho dropdown chọn người nhận bài.
+      parameters:
+        - $ref: '#/components/parameters/XTenantID'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: search
+          in: query
+          description: Tìm theo email hoặc tên hiển thị.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Danh sách học sinh có thể assign
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserListData'
+              example:
+                success: true
+                message: Selectable students retrieved
+                data:
+                  data:
+                    - id: 9c2d0d1f-6f9a-4d55-8b17-0b2a2a0f0b11
+                      email: student@example.com
+                      display_name: Student One
+                      tenant_id: 1f2c3d4e-1111-2222-3333-444455556666
+                      is_active: true
+                      roles:
+                        - id: 7a3a7a16-8f0e-4fcb-9d75-8a3b6b7f1c44
+                          name: Student
+                          description: Access to assigned tests and own submissions only.
+                      created_at: '2026-06-23T08:00:00.000000Z'
+                      updated_at: '2026-06-23T08:00:00.000000Z'
+                  pagination:
+                    total: 1
+                    count: 1
+                    per_page: 15
+                    current_page: 1
+                    last_page: 1
+                    from: 1
+                    to: 1
+        '400':
+          $ref: '#/components/responses/BadRequestApiError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedMessage'
+        '403':
+          $ref: '#/components/responses/ForbiddenMessage'
     post:
       tags: [Assignments]
       summary: Tạo phân công
@@ -1434,7 +1499,7 @@ paths:
     get:
       tags: [Assignments]
       summary: My assignments
-      description: List assignments for the authenticated student or guest. Student / Guest only.
+      description: List assignments for the authenticated student. Requires `assignments.view`.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
         - $ref: '#/components/parameters/Page'
@@ -2394,11 +2459,13 @@ paths:
     get:
       tags: [Audit]
       summary: Audit logs
-      description: Return audit trail records with tenant isolation. Admin only.
+      description: Return audit trail records with tenant isolation. Admin only. Supports filtering by `action` and `resource_type`.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/AuditAction'
+        - $ref: '#/components/parameters/AuditResourceType'
       responses:
         '200':
           description: Audit logs retrieved
@@ -2410,14 +2477,37 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          data:
-                            type: array
-                            items:
-                              type: object
-                          pagination:
-                            type: object
+                        $ref: '#/components/schemas/AuditLogListData'
+              example:
+                success: true
+                message: Audit logs retrieved
+                data:
+                  data:
+                    - id: 0c1df8b4-61d9-4a06-bac1-b5fd5fae7f11
+                      tenant_id: 1f2c3d4e-1111-2222-3333-444455556666
+                      actor_id: 9d3a8f21-44f2-4f7e-8cc4-b2e7e28a3a9e
+                      actor:
+                        id: 9d3a8f21-44f2-4f7e-8cc4-b2e7e28a3a9e
+                        email: admin@example.com
+                        display_name: Admin
+                      action: attempt.finalized
+                      resource_type: attempt
+                      resource_id: 8b7c6d5e-4f3a-2b1c-0d9e-123456789abc
+                      ip: 203.0.113.42
+                      metadata:
+                        auto_score: 7
+                        manual_score: 3
+                        total_score: 10
+                        is_passed: true
+                      created_at: '2026-06-23T08:30:00.000000Z'
+                  pagination:
+                    total: 1
+                    count: 1
+                    per_page: 15
+                    current_page: 1
+                    last_page: 1
+                    from: 1
+                    to: 1
         '400':
           $ref: '#/components/responses/BadRequestApiError'
         '401':
@@ -2564,6 +2654,18 @@ components:
         type: integer
         minimum: 1
         default: 15
+    AuditAction:
+      name: action
+      in: query
+      description: Lọc theo mã action audit, ví dụ `question.created`, `question.published`, `attempt.finalized`.
+      schema:
+        type: string
+    AuditResourceType:
+      name: resource_type
+      in: query
+      description: Lọc theo loại tài nguyên, ví dụ `question`, `test`, `attempt`, `answer`, `assignment`.
+      schema:
+        type: string
     TenantFilter:
       name: tenant_id
       in: query
@@ -2915,10 +3017,32 @@ components:
 
     AuthMeData:
       type: object
-      required: [user, permissions]
+      required: [user, roles, tenant_id, permissions]
       properties:
         user:
           $ref: '#/components/schemas/AuthUserResource'
+        roles:
+          type: array
+          items:
+            type: object
+            required: [id, name, description, tenant_id]
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              tenant_id:
+                type: string
+                format: uuid
+                nullable: true
+        tenant_id:
+          type: string
+          format: uuid
+          nullable: true
         tenant:
           allOf:
             - $ref: '#/components/schemas/TenantResource'
@@ -3595,6 +3719,73 @@ components:
         to:
           type: integer
           nullable: true
+
+    AuditActorResource:
+      type: object
+      required: [id, email, display_name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+
+    AuditLogResource:
+      type: object
+      required: [id, tenant_id, actor_id, actor, action, resource_type, resource_id, metadata, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+          format: uuid
+          nullable: true
+        actor:
+          allOf:
+            - $ref: '#/components/schemas/AuditActorResource'
+          nullable: true
+        action:
+          type: string
+          description: |
+            Event key used by the backend audit trail.
+            Current values include `question.created`, `question.published`, `question.archived`,
+            `test.published`, `assignment.created`, `attempt.submitted`, `attempt.force_submitted`,
+            `answer.reviewed`, and `attempt.finalized`.
+        resource_type:
+          type: string
+          example: attempt
+        resource_id:
+          type: string
+          format: uuid
+        ip:
+          type: string
+          nullable: true
+          description: IP address captured at the time the audit event was recorded.
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    AuditLogListData:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogResource'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
 
     LoginRequest:
       type: object

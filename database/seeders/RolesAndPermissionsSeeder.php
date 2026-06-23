@@ -14,7 +14,7 @@ class RolesAndPermissionsSeeder extends Seeder
     private array $permissions = [
         'questions'   => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
         'tests'       => ['view', 'build', 'publish'],
-        'assignments' => ['manage'],
+        'assignments' => ['manage', 'view'],
         'attempts'    => ['force-submit'],
         'grading'     => ['review'],
         'reports'     => ['view', 'export'],
@@ -80,7 +80,9 @@ class RolesAndPermissionsSeeder extends Seeder
             ['attempts', 'force-submit'],
             ['ai', 'suggest-feedback'],
         ],
-        'Student' => [],
+        'Student' => [
+            ['assignments', 'view'],
+        ],
         'Guest' => [],
     ];
 
@@ -130,7 +132,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ['Admin',            'users.manage, tenant.*, audit.view, reports.view/export'],
                 ['Creator',          'questions.*, tests.view/build/publish, assignments.manage, ai.generate-questions'],
                 ['Reviewer',         'grading.review, reports.view, attempts.force-submit, ai.suggest-feedback'],
-                ['Student',          '— (none)'],
+                ['Student',          'assignments.view'],
                 ['Guest',            '— (token-linked exam access only)'],
             ]
         );
