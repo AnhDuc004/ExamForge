@@ -17,7 +17,6 @@ class CreateUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
             'display_name' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8'],
-            'tenant_id' => ['required', 'uuid', 'exists:tenants,id'],
             'is_active' => ['sometimes', 'boolean'],
             'role_ids' => ['sometimes', 'array'],
             'role_ids.*' => ['uuid', 'exists:roles,id'],

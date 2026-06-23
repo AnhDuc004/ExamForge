@@ -23,7 +23,10 @@ class RoleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant_id');
+        $tenantId = $this->resolveCurrentTenantId($request);
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
         $page = (int) $request->query('page', 1);
         $perPage = (int) $request->query('per_page', 15);
 
@@ -45,9 +48,14 @@ class RoleController extends Controller
         );
     }
 
-    public function show(string $id): JsonResponse
+    public function show(string $id, Request $request): JsonResponse
     {
-        $role = $this->roleService->find($id);
+        $tenantId = $this->resolveCurrentTenantId($request);
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $role = $this->roleService->find($id, $tenantId);
 
         if (!$role) {
             return response()->json(
@@ -63,14 +71,18 @@ class RoleController extends Controller
 
     public function store(CreateRoleRequest $request): JsonResponse
     {
+        $tenantId = $this->resolveCurrentTenantId($request);
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new CreateRoleDTO([
-            'tenant_id' => $request->tenant_id,
             'name' => $request->name,
             'description' => $request->description,
             'permission_ids' => $request->permission_ids,
         ]);
 
-        $role = $this->roleService->create($dto);
+        $role = $this->roleService->create($dto, $tenantId);
 
         return response()->json(
             $this->successResponse('Role created successfully', new RoleResource($role)),
@@ -80,26 +92,42 @@ class RoleController extends Controller
 
     public function update(string $id, UpdateRoleRequest $request): JsonResponse
     {
+        $tenantId = $this->resolveCurrentTenantId($request);
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
         $dto = new UpdateRoleDTO([
-            'tenant_id' => $request->tenant_id,
             'name' => $request->name,
             'description' => $request->description,
             'permission_ids' => $request->permission_ids,
         ]);
 
-        $role = $this->roleService->update($id, $dto);
+        $role = $this->roleService->update($id, $dto, $tenantId);
 
         return response()->json(
             $this->successResponse('Role updated successfully', new RoleResource($role))
         );
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(string $id, Request $request): JsonResponse
     {
-        $this->roleService->delete($id);
+        $tenantId = $this->resolveCurrentTenantId($request);
+        if (!$tenantId) {
+            return response()->json($this->errorResponse('Tenant not resolved'), 400);
+        }
+
+        $this->roleService->delete($id, $tenantId);
 
         return response()->json(
             $this->successResponse('Role deleted successfully')
         );
+    }
+
+    private function resolveCurrentTenantId(Request $request): ?string
+    {
+        return app()->bound('currentTenant')
+            ? app('currentTenant')?->id
+            : $request->header('X-Tenant-ID');
     }
 }

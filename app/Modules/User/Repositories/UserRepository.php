@@ -18,6 +18,14 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
         return $this->model->with('roles')->find($id);
     }
 
+    public function findByIdForTenant(string $id, string $tenantId)
+    {
+        return $this->model->with('roles')
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+    }
+
     public function findByEmail(string $email)
     {
         return $this->model->with('roles')->where('email', $email)->first();

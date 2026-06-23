@@ -12,6 +12,7 @@ use App\Modules\Permission\Services\PermissionService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class PermissionController extends Controller
 {
@@ -62,6 +63,13 @@ class PermissionController extends Controller
 
     public function store(CreatePermissionRequest $request): JsonResponse
     {
+        if (!$request->user()?->hasRole('System Admin')) {
+            return response()->json(
+                $this->errorResponse('Only System Admin can manage the global permission catalog.', null, 'FORBIDDEN'),
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
         $dto = new CreatePermissionDTO([
             'resource' => $request->resource,
             'action' => $request->action,
@@ -77,6 +85,13 @@ class PermissionController extends Controller
 
     public function update(string $id, UpdatePermissionRequest $request): JsonResponse
     {
+        if (!$request->user()?->hasRole('System Admin')) {
+            return response()->json(
+                $this->errorResponse('Only System Admin can manage the global permission catalog.', null, 'FORBIDDEN'),
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
         $dto = new UpdatePermissionDTO([
             'resource' => $request->resource,
             'action' => $request->action,
@@ -89,8 +104,15 @@ class PermissionController extends Controller
         );
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(string $id, Request $request): JsonResponse
     {
+        if (!$request->user()?->hasRole('System Admin')) {
+            return response()->json(
+                $this->errorResponse('Only System Admin can manage the global permission catalog.', null, 'FORBIDDEN'),
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
         $this->permissionService->delete($id);
 
         return response()->json(

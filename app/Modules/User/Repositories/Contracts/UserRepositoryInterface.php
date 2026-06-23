@@ -6,6 +6,8 @@ interface UserRepositoryInterface
 {
     public function findById(string $id);
 
+    public function findByIdForTenant(string $id, string $tenantId);
+
     public function findByEmail(string $email);
 
     public function findByTenantAndEmail(string $tenantId, string $email);

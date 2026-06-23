@@ -508,10 +508,9 @@ paths:
     get:
       tags: [Users]
       summary: Danh sách người dùng
-      description: Lấy danh sách người dùng theo tenant, có thể lọc thêm theo từ khóa tìm kiếm và phân trang.
+      description: Lấy danh sách người dùng trong tenant hiện tại, có thể lọc thêm theo từ khóa tìm kiếm và phân trang.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
-        - $ref: '#/components/parameters/TenantFilter'
         - $ref: '#/components/parameters/SearchQuery'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
@@ -536,7 +535,7 @@ paths:
     post:
       tags: [Users]
       summary: Tạo người dùng
-      description: Tạo người dùng mới và gán role nếu có.
+      description: Tạo người dùng mới trong tenant hiện tại và chỉ được gán role thuộc tenant hiện tại hoặc role global được hệ thống cho phép.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
       requestBody:
@@ -573,7 +572,7 @@ paths:
     get:
       tags: [Users]
       summary: Chi tiết người dùng
-      description: Lấy thông tin người dùng theo ID.
+      description: Lấy thông tin người dùng theo ID trong tenant hiện tại.
       responses:
         '200':
           description: Lấy người dùng thành công
@@ -597,7 +596,7 @@ paths:
     put:
       tags: [Users]
       summary: Cập nhật người dùng
-      description: Cập nhật thông tin người dùng và role nếu có.
+      description: Cập nhật thông tin người dùng trong tenant hiện tại và chỉ được gán role thuộc tenant hiện tại hoặc role global được hệ thống cho phép. Không thể tự vô hiệu hóa chính mình.
       requestBody:
         required: true
         content:
@@ -627,7 +626,7 @@ paths:
     delete:
       tags: [Users]
       summary: Xoá người dùng
-      description: Xoá người dùng theo ID.
+      description: Xoá người dùng theo ID trong tenant hiện tại. Không thể tự xoá chính mình.
       responses:
         '200':
           description: Xoá người dùng thành công
@@ -660,7 +659,7 @@ paths:
     put:
       tags: [Users]
       summary: Cập nhật trạng thái người dùng
-      description: Bật hoặc tắt tài khoản người dùng.
+      description: Bật hoặc tắt tài khoản người dùng trong tenant hiện tại. Không thể tự vô hiệu hóa chính mình.
       requestBody:
         required: true
         content:
@@ -692,10 +691,9 @@ paths:
     get:
       tags: [Roles]
       summary: Danh sách vai trò
-      description: Lấy danh sách role theo tenant và phân trang.
+      description: Lấy danh sách role có thể truy cập trong tenant hiện tại, gồm role của tenant hiện tại và role global chỉ đọc do hệ thống cung cấp.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
-        - $ref: '#/components/parameters/TenantFilter'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
       responses:
@@ -719,7 +717,7 @@ paths:
     post:
       tags: [Roles]
       summary: Tạo vai trò
-      description: Tạo role mới và gán permission nếu có.
+      description: Tạo role mới trong tenant hiện tại và gán permission nếu có.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
       requestBody:
@@ -756,7 +754,7 @@ paths:
     get:
       tags: [Roles]
       summary: Chi tiết vai trò
-      description: Lấy thông tin role theo ID.
+      description: Lấy thông tin role theo ID nếu role thuộc tenant hiện tại hoặc là role global do hệ thống cung cấp.
       responses:
         '200':
           description: Lấy role thành công
@@ -780,7 +778,7 @@ paths:
     put:
       tags: [Roles]
       summary: Cập nhật vai trò
-      description: Cập nhật role và danh sách permission.
+      description: Chỉ cập nhật được role thuộc tenant hiện tại. Role global chỉ đọc và không thể bị tenant admin chỉnh sửa.
       requestBody:
         required: true
         content:
@@ -810,7 +808,7 @@ paths:
     delete:
       tags: [Roles]
       summary: Xoá vai trò
-      description: Xoá role theo ID.
+      description: Chỉ xoá được role thuộc tenant hiện tại. Role global chỉ đọc và không thể bị tenant admin xoá.
       responses:
         '200':
           description: Xoá role thành công
@@ -840,7 +838,7 @@ paths:
     get:
       tags: [Permissions]
       summary: Danh sách quyền
-      description: Lấy danh sách permission và phân trang.
+      description: Lấy danh sách permission global để tham chiếu khi cấu hình role.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
         - $ref: '#/components/parameters/Page'
@@ -866,7 +864,7 @@ paths:
     post:
       tags: [Permissions]
       summary: Tạo quyền
-      description: Tạo permission mới.
+      description: Tạo permission mới trong catalog global. Chỉ System Admin được phép thực hiện.
       parameters:
         - $ref: '#/components/parameters/XTenantID'
       requestBody:
@@ -903,7 +901,7 @@ paths:
     get:
       tags: [Permissions]
       summary: Chi tiết quyền
-      description: Lấy thông tin permission theo ID.
+      description: Lấy thông tin permission global theo ID.
       responses:
         '200':
           description: Lấy permission thành công
@@ -927,7 +925,7 @@ paths:
     put:
       tags: [Permissions]
       summary: Cập nhật quyền
-      description: Cập nhật permission theo ID.
+      description: Cập nhật permission trong catalog global. Chỉ System Admin được phép thực hiện.
       requestBody:
         required: true
         content:
@@ -957,7 +955,7 @@ paths:
     delete:
       tags: [Permissions]
       summary: Xoá quyền
-      description: Xoá permission theo ID.
+      description: Xoá permission khỏi catalog global. Chỉ System Admin được phép thực hiện.
       responses:
         '200':
           description: Xoá permission thành công
@@ -3750,7 +3748,7 @@ components:
 
     UserCreateRequest:
       type: object
-      required: [email, display_name, password, tenant_id]
+      required: [email, display_name, password]
       properties:
         email:
           type: string
@@ -3762,9 +3760,6 @@ components:
         password:
           type: string
           minLength: 8
-        tenant_id:
-          type: string
-          format: uuid
         is_active:
           type: boolean
         role_ids:
@@ -3787,9 +3782,6 @@ components:
           type: string
           minLength: 8
           nullable: true
-        tenant_id:
-          type: string
-          format: uuid
         is_active:
           type: boolean
         role_ids:
@@ -3809,10 +3801,6 @@ components:
       type: object
       required: [name]
       properties:
-        tenant_id:
-          type: string
-          format: uuid
-          nullable: true
         name:
           type: string
           maxLength: 255
@@ -3829,10 +3817,6 @@ components:
     RoleUpdateRequest:
       type: object
       properties:
-        tenant_id:
-          type: string
-          format: uuid
-          nullable: true
         name:
           type: string
           maxLength: 255

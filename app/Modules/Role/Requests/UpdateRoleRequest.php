@@ -14,7 +14,6 @@ class UpdateRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tenant_id' => ['sometimes', 'nullable', 'uuid', 'exists:tenants,id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'permission_ids' => ['sometimes', 'array'],

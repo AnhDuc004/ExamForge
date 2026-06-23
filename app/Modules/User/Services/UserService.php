@@ -4,6 +4,7 @@ namespace App\Modules\User\Services;
 
 use App\Modules\User\DTOs\CreateUserDTO;
 use App\Modules\User\DTOs\UpdateUserDTO;
+use App\Modules\Role\Repositories\Contracts\RoleRepositoryInterface;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\Contracts\UserRepositoryInterface;
 use App\Shared\Services\BaseService;
@@ -12,27 +13,25 @@ use Illuminate\Validation\ValidationException;
 
 class UserService extends BaseService
 {
-    public function __construct(private UserRepositoryInterface $userRepository)
-    {
+    public function __construct(
+        private UserRepositoryInterface $userRepository,
+        private RoleRepositoryInterface $roleRepository,
+    ) {
     }
 
-    public function list(?string $tenantId = null, int $page = 1, int $perPage = 15, ?string $search = null)
+    public function list(string $tenantId, int $page = 1, int $perPage = 15, ?string $search = null)
     {
-        if ($tenantId) {
-            return $this->userRepository->listByTenant($tenantId, $page, $perPage, $search);
-        }
-
-        return $this->userRepository->list($page, $perPage, $search);
+        return $this->userRepository->listByTenant($tenantId, $page, $perPage, $search);
     }
 
-    public function find(string $id): ?User
+    public function find(string $id, string $tenantId): ?User
     {
-        return $this->userRepository->findById($id);
+        return $this->userRepository->findByIdForTenant($id, $tenantId);
     }
 
-    public function create(CreateUserDTO $dto): User
+    public function create(CreateUserDTO $dto, string $tenantId): User
     {
-        $existing = $this->userRepository->findByTenantAndEmail($dto->tenant_id, $dto->email);
+        $existing = $this->userRepository->findByTenantAndEmail($tenantId, $dto->email);
         if ($existing) {
             throw ValidationException::withMessages([
                 'email' => ['This email is already taken for the selected tenant.'],
@@ -43,11 +42,12 @@ class UserService extends BaseService
             'email' => $dto->email,
             'display_name' => $dto->display_name,
             'password_hash' => Hash::make($dto->password),
-            'tenant_id' => $dto->tenant_id,
+            'tenant_id' => $tenantId,
             'is_active' => $dto->is_active ?? true,
         ]);
 
         if ($dto->role_ids !== null) {
+            $this->assertAssignableRoles($tenantId, $dto->role_ids);
             $user->roles()->syncWithPivotValues($dto->role_ids, [
                 'model_type' => User::class,
             ]);
@@ -56,9 +56,9 @@ class UserService extends BaseService
         return $user->load('roles');
     }
 
-    public function update(string $id, UpdateUserDTO $dto): User
+    public function update(string $id, UpdateUserDTO $dto, string $tenantId): User
     {
-        $user = $this->userRepository->findById($id);
+        $user = $this->userRepository->findByIdForTenant($id, $tenantId);
 
         if (!$user) {
             throw ValidationException::withMessages([
@@ -66,7 +66,6 @@ class UserService extends BaseService
             ]);
         }
 
-        $tenantId = $dto->tenant_id ?? $user->tenant_id;
         $email = $dto->email ?? $user->email;
 
         $existing = $this->userRepository->findByTenantAndEmail($tenantId, $email);
@@ -90,10 +89,6 @@ class UserService extends BaseService
             $attributes['password_hash'] = Hash::make($dto->password);
         }
 
-        if ($dto->tenant_id !== null) {
-            $attributes['tenant_id'] = $dto->tenant_id;
-        }
-
         if ($dto->is_active !== null) {
             $attributes['is_active'] = $dto->is_active;
         }
@@ -101,6 +96,7 @@ class UserService extends BaseService
         $updated = $this->userRepository->update($id, $attributes);
 
         if ($dto->role_ids !== null && $updated) {
+            $this->assertAssignableRoles($tenantId, $dto->role_ids);
             $updated->roles()->syncWithPivotValues($dto->role_ids, [
                 'model_type' => User::class,
             ]);
@@ -113,9 +109,9 @@ class UserService extends BaseService
         return $updated->load('roles');
     }
 
-    public function updateStatus(string $id, bool $isActive): User
+    public function updateStatus(string $id, bool $isActive, string $tenantId): User
     {
-        $user = $this->userRepository->findById($id);
+        $user = $this->userRepository->findByIdForTenant($id, $tenantId);
 
         if (!$user) {
             throw ValidationException::withMessages([
@@ -134,9 +130,9 @@ class UserService extends BaseService
         return $updated->load('roles');
     }
 
-    public function delete(string $id): void
+    public function delete(string $id, string $tenantId): void
     {
-        $user = $this->userRepository->findById($id);
+        $user = $this->userRepository->findByIdForTenant($id, $tenantId);
 
         if (!$user) {
             throw ValidationException::withMessages([
@@ -145,5 +141,20 @@ class UserService extends BaseService
         }
 
         $this->userRepository->delete($id);
+    }
+
+    private function assertAssignableRoles(string $tenantId, array $roleIds): void
+    {
+        if (empty($roleIds)) {
+            return;
+        }
+
+        $assignableCount = $this->roleRepository->findAssignableByIds($tenantId, $roleIds)->count();
+
+        if ($assignableCount !== count(array_unique($roleIds))) {
+            throw ValidationException::withMessages([
+                'role_ids' => ['Roles must belong to the current tenant or be system-allowed roles.'],
+            ]);
+        }
     }
 }

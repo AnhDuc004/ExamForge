@@ -16,19 +16,19 @@ class RoleService extends BaseService
     ) {
     }
 
-    public function list(?string $tenantId = null, int $page = 1, int $perPage = 15)
+    public function list(string $tenantId, int $page = 1, int $perPage = 15)
     {
-        return $this->roleRepository->list($tenantId, $page, $perPage);
+        return $this->roleRepository->listAccessible($tenantId, $page, $perPage);
     }
 
-    public function find(string $id): ?Role
+    public function find(string $id, string $tenantId): ?Role
     {
-        return $this->roleRepository->findById($id);
+        return $this->roleRepository->findAccessibleById($id, $tenantId);
     }
 
-    public function create(CreateRoleDTO $dto): Role
+    public function create(CreateRoleDTO $dto, string $tenantId): Role
     {
-        $existing = $this->roleRepository->findByTenantAndName($dto->tenant_id, $dto->name);
+        $existing = $this->roleRepository->findByTenantAndName($tenantId, $dto->name);
         if ($existing) {
             throw ValidationException::withMessages([
                 'name' => ['This role already exists for the selected tenant.'],
@@ -36,7 +36,7 @@ class RoleService extends BaseService
         }
 
         $role = $this->roleRepository->create([
-            'tenant_id' => $dto->tenant_id,
+            'tenant_id' => $tenantId,
             'name' => $dto->name,
             'description' => $dto->description,
         ]);
@@ -48,7 +48,7 @@ class RoleService extends BaseService
         return $role->load('permissions');
     }
 
-    public function update(string $id, UpdateRoleDTO $dto): Role
+    public function update(string $id, UpdateRoleDTO $dto, string $tenantId): Role
     {
         $role = $this->roleRepository->findById($id);
 
@@ -58,7 +58,12 @@ class RoleService extends BaseService
             ]);
         }
 
-        $tenantId = $dto->tenant_id ?? $role->tenant_id;
+        if ($role->tenant_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'role' => ['Only roles in the current tenant can be updated.'],
+            ]);
+        }
+
         $name = $dto->name ?? $role->name;
 
         $existing = $this->roleRepository->findByTenantAndName($tenantId, $name);
@@ -69,10 +74,6 @@ class RoleService extends BaseService
         }
 
         $attributes = [];
-
-        if ($dto->tenant_id !== null) {
-            $attributes['tenant_id'] = $dto->tenant_id;
-        }
 
         if ($dto->name !== null) {
             $attributes['name'] = $dto->name;
@@ -91,13 +92,19 @@ class RoleService extends BaseService
         return $updated->load('permissions');
     }
 
-    public function delete(string $id): void
+    public function delete(string $id, string $tenantId): void
     {
         $role = $this->roleRepository->findById($id);
 
         if (!$role) {
             throw ValidationException::withMessages([
                 'role' => ['Role not found.'],
+            ]);
+        }
+
+        if ($role->tenant_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'role' => ['Only roles in the current tenant can be deleted.'],
             ]);
         }
 
